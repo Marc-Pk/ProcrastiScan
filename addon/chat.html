@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ProcrastiScan Chat</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootswatch/4.3.1/darkly/bootstrap.min.css">
+  <style>
+    body {
+      padding: 15px;
+      min-width: 600px;
+    }
+    #chat-container {
+      min-width: 30vw;
+      height: 300px;
+      overflow-y: scroll;
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    .chat-message {
+      margin-bottom: 10px;
+      padding: 10px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+    }
+
+    .User {
+      text-align: right;
+    }
+
+    .Assistant {
+      text-align: left;
+      background-color: #2f4d6c;
+      color: #fff;
+    }
+    .button-container {
+    display: flex;
+    justify-content: space-between;
+    }
+
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <a class="navbar-brand">
+      <img src="assets/procrastiscan-icon-inv-128px.png" width="30" height="30">
+    </a>
+      <ul class="navbar-nav flex-row mr-auto">
+        <li class="nav-item" style="margin-right: 10px">
+          <a class="nav-link" href="popup.html" id="routeToHomeBtn">ProcrastiScan</a>
+        </li>
+        <li class="nav-item" style="margin-right: 10px">
+          <a class="nav-link" href="list.html" id="routeToListBtn">Procrastination List</a>
+        </li>
+        <li class="nav-item" style="margin-right: 10px">
+          <a class="nav-link" href="chat.html" id="routeToChatBtn">Chat</a>
+        </li>
+      </ul>
+  </nav>
+  <div id="chat-container"></div>
+  <div id="chat-controls">
+    <form id="chat-form">
+      <div class="form-group">
+        <label for="chat-message">Message:</label>
+        <input type="text" class="form-control" id="chat-message" placeholder="Enter your message" autocomplete="off">
+      </div>
+      <button class="btn btn-primary" id="sendMessageBtn">Send</button>
+      <button class="btn btn-primary" id="interveneBasicPromptBtn" style="display: none;">Help me get back on track</button>
+      <button id="clear-last-message" class="btn btn-secondary">Clear Last Message</button>
+      <button id="clear-conversation" class="btn btn-secondary">Clear Conversation</button>
+    </form>
+  </div>
+  <script src="browser-polyfill.js"></script>
+  <script src="chat.js"></script>
+</body>
+</html>

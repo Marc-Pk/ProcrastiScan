@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ProcrastiScan</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootswatch/4.3.1/darkly/bootstrap.min.css">
+  <style>
+    body {
+      padding: 15px;
+      min-width: 600px;
+    }
+
+    #similarityRatingHeader.disabled {
+      color: #6c757d;
+    }
+  </style>
+</head>
+<body>    
+  <nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <a class="navbar-brand">
+      <img src="assets/procrastiscan-icon-inv-128px.png" width="30" height="30">
+    </a>
+      <ul class="navbar-nav flex-row mr-auto">
+        <li class="nav-item" style="margin-right: 10px">
+          <a class="nav-link" href="popup.html" id="routeToHomeBtn">ProcrastiScan</a>
+        </li>
+        <li class="nav-item" style="margin-right: 10px">
+          <a class="nav-link" href="list.html" id="routeToListBtn">Procrastination List</a>
+        </li>
+        <li class="nav-item" style="margin-right: 10px">
+          <a class="nav-link" href="chat.html" id="routeToChatBtn">Chat</a>
+        </li>
+      </ul>
+  </nav>
+  
+  <div>
+    <h4>
+      <span id="greenDot" style="display: none;">✓</span>
+      <span id="redDot" style="display: inline;">↻</span>
+      <label id="similarityRatingHeader">Similarity Rating: <span id="lastRating"></span> — <span id="currentTitle">Loading...</span></label>
+    </h4>
+  </div>
+  <div>
+    <label for="meanRating">Mean Rating for the last 10 minutes:</label>
+    <span id="meanRating"></span>
+  </div>
+  <div class="custom-control custom-switch" style="display: none;">
+    <input type="checkbox" class="custom-control-input" id="addonEnabled" checked>
+    <label class="custom-control-label" for="addonEnabled">Enable/Disable Addon</label>
+  </div>
+  <script src="browser-polyfill.js"></script>
+  <script src="popup.js"></script>
+  <script src="chat.js"></script>
+  <form>
+    <div class="form-group">
+      <label for="task">Task:</label>
+      <input type="text" class="form-control" id="task" placeholder="Your task. Example: Research why birds can fly">
+    </div>
+    <div class="form-group">
+      <label for="relatedContent">Related Content:</label>
+      <div class="input-group">
+        <input type="text" class="form-control" id="relatedContent" placeholder="Websites, topics or tools relevant to your task (comma-separated): planes, birds, zotero, air, notion...">
+        <div class="input-group-append">
+          <button class="btn btn-secondary" type="button" id="suggestKeywordsBtn" style="display: none;">Suggest Keywords</button>
+        </div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="commonDistractions">Common Distractions:</label>
+      <input type="text" class="form-control" id="commonDistractions" placeholder="Websites, topics or tools that typically distract you (comma-separated): instagram, cat videos, news, politics, entertainment...">
+    </div>
+    <button id="saveSettingsBtn" class="btn btn-primary">Save Settings</button>
+    <button id="identifyDistractingTabsBtn" class="btn btn-primary">Identify Distracting Tabs</button>
+    <button id="demoContentBtn" class="btn btn-primary" style="display: none;">Demo Button</button>
+  </form>
+</body>
+</html>

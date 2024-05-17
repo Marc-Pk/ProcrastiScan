@@ -1,0 +1,45 @@
+{
+  "manifest_version": 2,
+  "name": "ProcrastiScan",
+  "version": "1.0",
+  "description": "A new approach to detecting procrastination",
+  "icons": {
+    "128": "assets/procrastiscan-icon-inv-128px.png"
+  },
+  "permissions": [
+    "tabs",
+    "activeTab",
+    "webRequest",
+    "webRequestBlocking",
+    "webNavigation",
+    "storage",
+    "ws://localhost:8765/",
+    "theme"
+  ],
+  "background": {
+    "scripts": ["browser-polyfill.js", "background.js"],
+    "persistent": true
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["browser-polyfill.js", "list.js"]
+    }
+  ],
+  "browser_action": {
+    "default_popup": "popup.html"
+  },
+  "web_accessible_resources": [
+    "browser-polyfill.js",
+    "popup.html",
+    "popup.js",
+    "list.html",
+    "list.js",
+    "chat.html",
+    "chat.js"
+  ],
+  "options_ui": {
+    "page": "welcome.html",
+    "open_in_tab": true
+  }
+}
