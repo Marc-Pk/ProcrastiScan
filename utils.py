@@ -267,15 +267,6 @@ class MindfulDB:
         self.conn.close()
 
 
-def rate_current_tabs(df, embedding_task, embeddings_distractions, embeddings_related_content, embedding_model):
-    # Calculate similarity ratings for all open tabs
-    df["domain"] = df['url'].apply(lambda x: urlparse(x).netloc)
-    df["similarity_rating"] = df.apply(lambda row: calculate_similarity(pd.DataFrame(row).T, embedding_task, embeddings_distractions, embeddings_related_content, embedding_model)["similarity_rating"].values[0], axis=1)
-    df = df[(df["similarity_rating"] < 0.6)]
-    df["content_string"] = df["domain"] + " | " + df["title"]
-    return df
-
-
 class LLM():
     def __init__(self):
         self.llm = openai.OpenAI(
@@ -428,6 +419,14 @@ def calculate_average_similarity(row, conn, window_length=10):
     weighted_average = weighted_sum / total_weight
 
     return weighted_average
+
+
+def rate_current_tabs(df, embedding_task, embeddings_distractions, embeddings_related_content, embedding_model):
+    # Calculate similarity ratings for all open tabs
+    df["domain"] = df['url'].apply(lambda x: urlparse(x).netloc)
+    df["similarity_rating"] = df.apply(lambda row: calculate_similarity(pd.DataFrame(row).T, embedding_task, embeddings_distractions, embeddings_related_content, embedding_model)["similarity_rating"].values[0], axis=1)
+    df = df[(df["similarity_rating"] < 0.5)]
+    return df
 
 
 def embed_user_info(user_info, embedding_model):
