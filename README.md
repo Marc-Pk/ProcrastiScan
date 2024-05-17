@@ -23,8 +23,8 @@ ProcrastiScan helps you stay focused and productive by continually checking if t
 5. Launch the server script by executing `python server.py`. 
 
 #### Option 2, without Python: 
-1. Download the executable edition here [coming soon] and unzip it.
-2. Launch the server by double-clicking the server.exe file.
+1. Download the procrastiscan-server-v1.0.0.exe file [here](https://github.com/Marc-Pk/ProcrastiScan/releases/tag/release) and save it in a new folder.
+2. Launch the server by double-clicking the .exe file.
 
 **The ProcrastiScan server must be running at all times for the extension to work.**
 
