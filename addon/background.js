@@ -1,4 +1,5 @@
 // background.js - Background script for the addon
+importScripts("browser-polyfill.js");
 let lastRating = null;
 let meanRating = null;
 let lastInterventionTime = null;
@@ -120,7 +121,7 @@ function startWebSocket() {
   ws.onerror = function() {
     console.log('Websocket error, closing connection');
     ws.close();
-    delete ws;
+    ws = null;
   }
 };
 
@@ -244,7 +245,7 @@ browser.runtime.onMessage.addListener((request) => {
   // force the websocket to reconnect
   if (request.type === 'checkServerStatus') {
     ws.close();
-    delete ws;
+    ws = null;
   }
 
   // test the LLM connection
@@ -299,17 +300,6 @@ browser.runtime.onMessage.addListener((request) => {
     identifyDistractingTabs(true); //false to use extension popup
   }
 });
-
-
-// Set the initial lastRating value after the background script has loaded, if it is not already set
-window.addEventListener('load', () => {
-  browser.storage.local.get('lastRating').then(result => {
-    if (result.lastRating === undefined) {
-      browser.storage.local.set({ lastRating: null });
-    }
-  });
-});
-
 
 // Check which of the open tabs are among those identified as distracting and highlight them
 async function handleDistractingTabs(distractingIndices) {

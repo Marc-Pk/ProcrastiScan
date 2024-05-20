@@ -1,5 +1,5 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "ProcrastiScan",
   "version": "1.0",
   "description": "A new approach to detecting procrastination",
@@ -9,14 +9,12 @@
   "permissions": [
     "tabs",
     "webNavigation",
-    "storage",
-    "theme"
+    "storage"
   ],
   "background": {
-    "scripts": ["browser-polyfill.js", "background.js"],
-    "persistent": true
+    "service_worker": "background.js"
   },
-  "browser_action": {
+  "action": {
     "default_popup": "popup.html"
   },
   "options_ui": {
