@@ -45,8 +45,8 @@ function updatePopupUI() {
       const addonEnabled = result.addonEnabled !== undefined ? result.addonEnabled : true;
 
       const currentTabTitleElement = document.getElementById('currentTitle');
-      const redDotElement = document.getElementById('redDot');
-      const greenDotElement = document.getElementById('greenDot');
+      const ratingOutdatedElement = document.getElementById('ratingOutdated');
+      const ratingRecentElement = document.getElementById('ratingRecent');
       const taskElement = document.getElementById('task');
       const relatedContentElement = document.getElementById('relatedContent');
       const commonDistractionsElement = document.getElementById('commonDistractions');
@@ -62,14 +62,14 @@ function updatePopupUI() {
     // Toggle indicator color based on current tab URL
     if (addonEnabled) {
       if (currentTabUrl === result.currentUrl) {
-        redDotElement.style.display = 'none';
-        greenDotElement.style.display = 'inline';
+        ratingOutdatedElement.style.display = 'none';
+        ratingRecentElement.style.display = 'inline';
         getCurrentTabTitle().then(title => {
           currentTabTitleElement.textContent = title;
         });
       } else {
-        redDotElement.style.display = 'inline';
-        greenDotElement.style.display = 'none';
+        ratingOutdatedElement.style.display = 'inline';
+        ratingRecentElement.style.display = 'none';
         currentTabTitleElement.textContent = 'Loading...';
       }
 
@@ -78,8 +78,8 @@ function updatePopupUI() {
       similarityRatingHeader.classList.remove('disabled');
     } else {
       // Addon is disabled
-      redDotElement.style.display = 'none';
-      greenDotElement.style.display = 'none';
+      ratingOutdatedElement.style.display = 'none';
+      ratingRecentElement.style.display = 'none';
       currentTabTitleElement.textContent = 'Addon is currently disabled';
       lastRatingElement.textContent = '';
       meanRatingElement.textContent = '';

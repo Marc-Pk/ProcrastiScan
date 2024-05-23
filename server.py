@@ -158,6 +158,10 @@ async def handler(websocket, path):
                     db.write_back_self_report(data)
                     continue
 
+                if "message" in data and data["message"] == "getDashboardData":
+                    dashboard_data = db.get_dashboard_data()
+                    await websocket.send(json.dumps({'dashboardData': dashboard_data}))
+
 
                 # only process the data if the addon is enabled, the data is not empty and the last update was more than 300ms ago
                 if "title" in data and ADDON_ENABLED:
@@ -206,7 +210,7 @@ async def handler(websocket, path):
             previous_window = current_window
 
     except:
-        pass #print(traceback.format_exc())
+        pass#print(f"Timestamp: {pd.Timestamp.now()}, Error: {traceback.format_exc()}")
 
 async def start_server():
     WEBSOCKET_PORT = 8765

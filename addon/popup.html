@@ -30,13 +30,16 @@
         <li class="nav-item" style="margin-right: 10px">
           <a class="nav-link" href="chat.html" id="routeToChatBtn">Chat</a>
         </li>
+        <li class="nav-item" style="margin-right: 10px">
+          <a class="nav-link" href="dashboard.html" id="routeToDashboardBtn">Dashboard</a>
+        </li>
       </ul>
   </nav>
   
   <div>
     <h4>
-      <span id="greenDot" style="display: none;">✓</span>
-      <span id="redDot" style="display: inline;">↻</span>
+      <span id="ratingRecent" style="display: none;">✓</span>
+      <span id="ratingOutdated" style="display: inline;">↻</span>
       <label id="similarityRatingHeader">Similarity Rating: <span id="lastRating"></span> — <span id="currentTitle">Loading...</span></label>
     </h4>
   </div>
@@ -48,7 +51,7 @@
     <input type="checkbox" class="custom-control-input" id="addonEnabled" checked>
     <label class="custom-control-label" for="addonEnabled">Enable/Disable Addon</label>
   </div>
-  <script src="browser-polyfill.js"></script>
+  <script src="lib/browser-polyfill.js"></script>
   <script src="popup.js"></script>
   <script src="chat.js"></script>
   <form>

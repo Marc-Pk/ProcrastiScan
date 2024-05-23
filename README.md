@@ -1,4 +1,14 @@
-# ProcrastiScan
+
+# Table of Contents
+* [About](#about)
+* [Features](#features)
+* [Installation](#installation)
+* [Study Conditions](#study-conditions)
+* [How it Works](#how-it-works)
+* [Privacy](#privacy)
+* [FAQ](#faq)
+
+# About
 
 ProcrastiScan helps you stay focused and productive by continually checking if the content you're viewing aligns with what you actually want to be doing. 
 
@@ -38,9 +48,9 @@ Install a LLM-server if you don't have one already or prefer an external API ser
 5. Click "Start Server" and press the below button.
 
 ### Step 3: Download the browser extension
-You can get it [here](https://addons.mozilla.org/en-US/firefox/addon/procrastiscan/) for Firefox (fully supported) or Chrome [coming soon] (partially supported). After installation, you will be guided through the setup process.
+You can get it [here](https://addons.mozilla.org/en-US/firefox/addon/procrastiscan/) for Firefox (fully supported) or [here](https://chromewebstore.google.com/detail/procrastiscan/pjieainhjbcopkledhjjlnajfelblpnp) for Chrome and other browsers. After installation, you will be guided through the setup process.
 
-If you restart your computer at any point instead of waking it up from sleep, you will need to restart both servers.
+**If you restart your computer at any point instead of waking it up from sleep, you will need to restart both servers.**
 
 ## Study Conditions
 

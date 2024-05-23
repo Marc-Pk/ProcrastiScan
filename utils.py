@@ -224,6 +224,16 @@ class MindfulDB:
         # If there is no self-report in the database yet, return True
         except:
             return True
+        
+    def get_dashboard_data(self):
+        # Get the data for the dashboard
+        time_max = pd.Timestamp.now()
+        time_min = time_max - pd.Timedelta(days=7)
+        
+        dashboard_data = pd.read_sql('SELECT time, similarity_rating, similarity_rating_avg, title FROM history WHERE time > ? AND time <= ?', self.conn, params=(time_min.strftime("%Y-%m-%d %H:%M:%S"), time_max.strftime("%Y-%m-%d %H:%M:%S"))).dropna()
+        dashboard_data = dashboard_data.to_dict(orient="dict")
+        return dashboard_data
+
 
     def telemetry_export(self, currentIntervention, nextIntervention):
         # Export telemetry data to Firebase

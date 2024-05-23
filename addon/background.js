@@ -1,11 +1,13 @@
 // background.js - Background script for the addon
-importScripts("browser-polyfill.js");
+importScripts("lib/browser-polyfill.js"); // remove this line for Firefox
+
 let lastRating = null;
 let meanRating = null;
 let lastInterventionTime = null;
 let lastSentUrl = null;
 let addonEnabled;
 let popupWindowId = null;
+let interventionWindowId = null;
 let ws;
 let addonInitialized = browser.storage.local.get('addonInitialized') || false;
 let user_info = browser.storage.local.get('user_info') || null;
@@ -104,7 +106,11 @@ function startWebSocket() {
       console.log('Received distracting indices');
       handleDistractingTabs(response.distractingIndices).then(() => {
       openInterventionPopup();
-    });
+      });
+    }
+    if (response.dashboardData) {
+      console.log('Received dashboard data', response.dashboardData);
+      browser.runtime.sendMessage({ type: 'dashboardData', data: response.dashboardData });
     }
   };
 
@@ -184,6 +190,7 @@ browser.webNavigation.onCompleted.addListener((details) => {
 browser.runtime.onMessage.addListener((request) => {
   // Send the self-report data to the WebSocket server
   if (request.type === 'selfReport') {
+    console.log('Sending self-report data');
     const selfReport = {
       message: 'selfReport',
       context: 'selfReport',
@@ -192,51 +199,14 @@ browser.runtime.onMessage.addListener((request) => {
       distractionLevel: request.distractionLevel
     }
     ws.send(JSON.stringify(selfReport));
+    
   }
 
   // Augment the intervention data with self-report data and send to the WebSocket server
   if (request.type === 'selfReportIntervention') {
-    browser.storage.local.get(["listTrackingDataTemp", "chatbotTrackingDataTemp"]).then(result => {
-      if (result.listTrackingDataTemp) {
-        console.log('Sending listTrackingDataTemp');
-        const listTrackingData = result.listTrackingDataTemp;
-        listTrackingData.interventionRating = request.interventionRating;
-        listTrackingData.isProductiveTime = request.isProductiveTime;
-        console.log('Sending listTrackingData:', listTrackingData);
-        ws.send(JSON.stringify({ message: 'listTrackingData', listTrackingData: listTrackingData}));
-        browser.storage.local.remove('listTrackingDataTemp');
-      }
-      else if (result.chatbotTrackingDataTemp) {
-        const chatbotTrackingData = result.chatbotTrackingDataTemp;
-        chatbotTrackingData.interventionRating = request.interventionRating;
-        chatbotTrackingData.isProductiveTime = request.isProductiveTime;
-        console.log('Sending chatbotTrackingData:', chatbotTrackingData);
-        ws.send(JSON.stringify({ message: 'chatbotTrackingData', chatbotTrackingData: chatbotTrackingData}));
-        browser.storage.local.remove('chatbotTrackingDataTemp');
-      }
-    });
-
-  }
-  // Slightly different from above as there is no self report data
-  if (request.type === 'chatbotInterventionRejected') {
-    browser.storage.local.get(["chatbotTrackingDataTemp"]).then(result => {
-      const chatbotTrackingData = result.chatbotTrackingDataTemp;
-      chatbotTrackingData.interventionRating = -1;
-      chatbotTrackingData.isProductiveTime = -1;
-      console.log('Sending chatbotTrackingData:', chatbotTrackingData);
-      ws.send(JSON.stringify({ message: 'chatbotTrackingData', chatbotTrackingData: chatbotTrackingData}));
-      browser.storage.local.remove('chatbotTrackingDataTemp');
-    });
+    sendSelfReportData(request);
   }
 
-  // Open the self-report popup after an intervention except when the study is finished
-  if (request.type === 'openInterventionRatingPopup') {
-    browser.storage.local.get('studyFinished').then(result => {
-      if (!result.studyFinished) {
-        openSelfReportPopup(true);
-      }
-    });
-  }
   // Send the lastRating to the popup script
   if (request.type === 'getRating') {
     browser.runtime.sendMessage({ type: 'updateRating', rating: lastRating });
@@ -299,7 +269,34 @@ browser.runtime.onMessage.addListener((request) => {
   if (request.type === 'identifyDistractingTabs') {
     identifyDistractingTabs(true); //false to use extension popup
   }
+
+  if (request.type === 'getDashboardData') {
+    ws.send(JSON.stringify({ message: 'getDashboardData'}));
+  }
 });
+
+function sendSelfReportData(request) {
+  // Send the self-report data to the server if it exists and remove the temporary storage
+  browser.storage.local.get(["listTrackingDataTemp", "chatbotTrackingDataTemp"]).then(result => {
+    if (result.listTrackingDataTemp) {
+      const listTrackingData = result.listTrackingDataTemp;
+      listTrackingData.interventionRating = request.interventionRating || -1;
+      listTrackingData.isProductiveTime = request.isProductiveTime || -1;
+      console.log('Sending listTrackingData:', listTrackingData);
+      ws.send(JSON.stringify({ message: 'listTrackingData', listTrackingData: listTrackingData}));
+      browser.storage.local.remove('listTrackingDataTemp');
+    }
+    else if (result.chatbotTrackingDataTemp) {
+      const chatbotTrackingData = result.chatbotTrackingDataTemp;
+      chatbotTrackingData.interventionRating = request.interventionRating || -1;
+      chatbotTrackingData.isProductiveTime = request.isProductiveTime || -1;
+      console.log('Sending chatbotTrackingData:', chatbotTrackingData);
+      ws.send(JSON.stringify({ message: 'chatbotTrackingData', chatbotTrackingData: chatbotTrackingData}));
+      browser.storage.local.remove('chatbotTrackingDataTemp');
+    }
+  });
+}
+
 
 // Check which of the open tabs are among those identified as distracting and highlight them
 async function handleDistractingTabs(distractingIndices) {
@@ -323,46 +320,46 @@ async function updateIconColor(rating, availableInterventions) {
   if (rating === null) {
     rating = 0.5;
   }
-  // generate a canvas element
-  // Load the PNG image with transparency
-  const img = new Image();
-  img.src = 'assets/procrastiscan-icon-inv-128px.png';
-  await new Promise(resolve => { img.onload = resolve; });
-
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  canvas.width = 128;
-  canvas.height = 128;
-
-  // Calculate RGB values based on the rating, gray if addon is disabled
-  let red, green, blue;
-  if (addonEnabled) {
-    // Adjust brightness based on rating and clip to (0,1)
-    brightness = Math.max(0, Math.min(1, 0.7 - rating));
-    
-    // Calculate colors
-    red = Math.floor(100 + (155 * brightness));
-    green = Math.floor(100 - (100 * brightness));
-    blue = Math.floor(100 - (100 * brightness));
-  } else {
-    // Default dark grey
-    red = 100;
-    green = 100;
-    blue = 100;
-  }
-  
-  color = `rgb(${red}, ${green}, ${blue})`;
-  ctx.fillStyle = `rgb(${red}, ${green}, ${blue})`;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  // Draw the icon onto the canvas
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  browser.browserAction.setIcon({ imageData: imageData });
-
-  // Update the theme color if the nudging intervention is available
   try {
+    // generate a canvas element
+    // Load the PNG image with transparency
+    const img = new Image();
+    img.src = 'assets/procrastiscan-icon-inv-128px.png';
+    await new Promise(resolve => { img.onload = resolve; });
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 128;
+    canvas.height = 128;
+
+    // Calculate RGB values based on the rating, gray if addon is disabled
+    let red, green, blue;
+    if (addonEnabled) {
+      // Adjust brightness based on rating and clip to (0,1)
+      brightness = Math.max(0, Math.min(1, 0.7 - rating));
+      
+      // Calculate colors
+      red = Math.floor(100 + (155 * brightness));
+      green = Math.floor(100 - (100 * brightness));
+      blue = Math.floor(100 - (100 * brightness));
+    } else {
+      // Default dark grey
+      red = 100;
+      green = 100;
+      blue = 100;
+    }
+    
+    color = `rgb(${red}, ${green}, ${blue})`;
+    ctx.fillStyle = `rgb(${red}, ${green}, ${blue})`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw the icon onto the canvas
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    browser.browserAction.setIcon({ imageData: imageData });
+
+    // Update the theme color if the nudging intervention is available
     if (availableInterventions.indexOf("nudging") != -1) {
       browser.theme.update({
         colors: {
@@ -377,7 +374,6 @@ async function updateIconColor(rating, availableInterventions) {
       }
     }
     catch (e) {
-      console.log('Theme updating not available: ', e);
     }
 }
 
@@ -433,9 +429,9 @@ function identifyDistractingTabs(openInterventionWindow) {
 
 function openInterventionPopup() {
   // Check if the popup window is already open
-  if (popupWindowId !== null) {
+  if (interventionWindowId !== null) {
     // Focus on the existing popup window
-    browser.windows.update(popupWindowId, { focused: true });
+    browser.windows.update(interventionWindowId, { focused: true });
   } else {
     // Open the extension popup in a new browser window
     browser.windows.create({
@@ -445,24 +441,27 @@ function openInterventionPopup() {
       height: 600,
       focused: true
     }).then((window) => {
-      popupWindowId = window.id;
-    });
+      interventionWindowId = window.id;
+    }).then(() => {
     browser.windows.onFocusChanged.addListener((newWindowId) => {
-      if (popupWindowId !== null) {
-        if (newWindowId === popupWindowId) {
-          browser.windows.update(popupWindowId, { focused: true });
+      if (interventionWindowId !== null) {
+        if (newWindowId === interventionWindowId) {
+          browser.windows.update(interventionWindowId, { focused: true });
         } else {
-          browser.windows.remove(popupWindowId);
+          browser.windows.remove(interventionWindowId);
+          interventionWindowId = null;
           popupWindowId = null;
+          openSelfReportPopup(true);
+          browser.windows.onFocusChanged.removeListener();
         }
       }
     });
+  });
   }
 }
 
 
 function openSelfReportPopup(intervention) {
-  console.log('Opening self-report popup');
   let popupUrl = "self-report.html";
   if (intervention) {
     popupUrl = "self-report-intervention.html";
@@ -481,12 +480,14 @@ function openSelfReportPopup(intervention) {
       popupWindowId = window.id;
     });
     browser.windows.onFocusChanged.addListener((newWindowId) => {
-      if (popupWindowId !== null) {
+      if (popupWindowId !== null && newWindowId !== -1) {
         if (newWindowId === popupWindowId) {
           browser.windows.update(popupWindowId, { focused: true });
         } else {
           browser.windows.remove(popupWindowId);
           popupWindowId = null;
+          sendSelfReportData({ interventionRating: -1, isProductiveTime: -1 });
+          browser.windows.onFocusChanged.removeListener();
         }
       }
     });

@@ -11,14 +11,15 @@ function sendSelfReportData() {
       stressLevel: stressLevel,
       distractionLevel: distractionLevel,
       isProductiveTime: isProductiveTime
+    }).then(() => {
+        dataSent = true;
+        window.close();
     });
-    dataSent = true;
 }
 
 document.getElementById('self-report-form').addEventListener('submit', (event) => {
     event.preventDefault();
     sendSelfReportData();
-    window.close();
 });
 
 // Send the runtime message even if the window closes without clicking submit

@@ -233,7 +233,7 @@ function loadConversation() {
       chatContainer.appendChild(actionsContainer);
       browser.storage.local.remove('distractingTabs');
     }
-    // Handle chatbot intervention if it exists. WIP
+    // Handle chatbot intervention if it exists.
     if (chatbotInterventionTriggered) {
       const chatContainer = document.getElementById('chat-container');
       const actionsContainer = document.createElement('div');
@@ -259,21 +259,7 @@ function loadConversation() {
       noButton.addEventListener('click', () => {
         browser.storage.local.remove(['chatbotInterventionTriggered']);
         storeMessageInConversation('User', "No", false).then(() => {
-          browser.storage.local.get(["chatbotTrackingData", "conversation"]).then(result => {
-            const conversationData = result.conversation || [];
-            const chatbotTrackingData = result.chatbotTrackingData;
-            
-            chatbotTrackingData.nTotalMessages = conversationData.filter(msg => msg.message !== '...').length;
-            chatbotTrackingData.nUserMessages = conversationData.filter(msg => msg.sender === "User").length;
-            chatbotTrackingData.timeSpent = new Date().getTime() - chatbotTrackingData.startTime;
-            
-            console.log(chatbotTrackingData)
-            browser.storage.local.set({ chatbotTrackingDataTemp: chatbotTrackingData});
-            browser.storage.local.remove(["chatbotTrackingData", "chatbotInterventionTriggered"]);
-            browser.runtime.sendMessage({ type: 'chatbotInterventionRejected' });
-          }).then(() => {
-            window.close();
-          });
+          sendTrackingData();
         });
       });
       buttonsContainer.appendChild(noButton);
@@ -385,7 +371,6 @@ async function saveDistractingTabs(distractingTabs) {
 function initializeTrackingData() {
   return browser.storage.local.get(['listInterventionTriggered', 'chatbotInterventionTriggered', 'distractingTabs', 'distractingEntries']).then(data => {
     if (data.listInterventionTriggered !== undefined) {
-      console.log("list opened");
       let nTabsOpenDistracting = 0;
       let nTabsInList = 0;
       if (data.distractingTabs !== undefined) {
@@ -408,7 +393,6 @@ function initializeTrackingData() {
     }
     
     else if (data.chatbotInterventionTriggered) {
-      console.log("chat opened");
       const chatbotTrackingData = {
         isTriggered: data.chatbotInterventionTriggered || false,
         startTime: new Date().getTime()
@@ -432,7 +416,6 @@ function sendTrackingData() {
 
       browser.storage.local.set({ listTrackingDataTemp: listTrackingData});
       browser.storage.local.remove(["listTrackingData", "listInterventionTriggered"]);
-      browser.runtime.sendMessage({ type: 'openInterventionRatingPopup' });
 
     }
     else if (result.chatbotTrackingData) {
@@ -447,14 +430,15 @@ function sendTrackingData() {
       console.log(chatbotTrackingData)
       browser.storage.local.set({ chatbotTrackingDataTemp: chatbotTrackingData});
       browser.storage.local.remove(["chatbotTrackingData", "chatbotInterventionTriggered"]);
-      browser.runtime.sendMessage({ type: 'openInterventionRatingPopup' });
     }
+  }).then(() => {
+    window.close();
   });
 }
 
 // Add event listener for window or tab close
 window.addEventListener('blur', sendTrackingData);
 
-window.onbeforeunload = function(e){
+window.addEventListener('beforeunload', () =>{
   window.blur();
-}
+});
