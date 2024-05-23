@@ -22,6 +22,7 @@ ProcrastiScan helps you stay focused and productive by continually checking if t
 
 - **LLM-assisted Conversation**: Engage in a focused conversation with an AI assistant to get back on track or reflect on why you got distracted.
 
+- **Dashboard**: View your similarity score history and see when you were most focused or distracted. 
 ## Installation
 
 ### Step 1: Set up the extension server
@@ -33,7 +34,7 @@ ProcrastiScan helps you stay focused and productive by continually checking if t
 5. Launch the server script by executing `python server.py`. 
 
 #### Option 2, without Python: 
-1. Download the procrastiscan-server-v1.0.0.exe file [here](https://github.com/Marc-Pk/ProcrastiScan/releases/tag/release) and save it in a new folder.
+1. Download the procrastiscan-server-v1.1.0.exe file [here](https://github.com/Marc-Pk/ProcrastiScan/releases/tag/release) and save it in a new folder.
 2. Launch the server by double-clicking the .exe file.
 
 **The ProcrastiScan server must be running at all times for the extension to work.**
@@ -48,7 +49,7 @@ Install a LLM-server if you don't have one already or prefer an external API ser
 5. Click "Start Server" and press the below button.
 
 ### Step 3: Download the browser extension
-You can get it [here](https://addons.mozilla.org/en-US/firefox/addon/procrastiscan/) for Firefox (fully supported) or [here](https://chromewebstore.google.com/detail/procrastiscan/pjieainhjbcopkledhjjlnajfelblpnp) for Chrome and other browsers. After installation, you will be guided through the setup process.
+You can get it [here](https://addons.mozilla.org/en-US/firefox/addon/procrastiscan/) for Firefox or [here](https://chromewebstore.google.com/detail/procrastiscan/pjieainhjbcopkledhjjlnajfelblpnp) for Chrome and other browsers. After installation, you will be guided through the setup process.
 
 **If you restart your computer at any point instead of waking it up from sleep, you will need to restart both servers.**
 
@@ -56,7 +57,7 @@ You can get it [here](https://addons.mozilla.org/en-US/firefox/addon/procrastisc
 
 For the duration of the study, this addon has several limitations:
 
-- every 3 days, the "triggerable" feature will change. This means the default intervention (of the features listed above) that will be enacted when the addon considers you to get distracted. **In the end, there will be a 3 day baseline period where no interventions will be triggered automatically**
+- every 3 days, the "triggerable" feature will change. This means the default intervention (distraction list, chatbot, and nudging if you use Firefox) that will be enacted when the addon considers you to get distracted. **In the end, there will be a 3 day baseline period where no interventions will be triggered automatically**
 
 - you can participate in a raffle if you complete the full study (12 days for Firefox / 9 days for other browsers), two winners will receive 20€ each
 
@@ -100,7 +101,7 @@ Everything is stored and processed on your device only unless you manually choos
 ## FAQ
 
 ### Which browsers and operating systems are supported?
-Only Windows is supported currently. Firefox is fully supported and the only browser to include the nudging intervention. Chrome, Opera and MS Edge were tested briefly and appear to have issue with deleting items from the procrastination list. 
+ProcrastiScan only works with Windows currently. Firefox is the only browser to include the nudging intervention. Chrome is supported and the respective extension should also be compatible with Opera and MS Edge.
 
 ### What are limitations I should be aware of?
 Technical: 
