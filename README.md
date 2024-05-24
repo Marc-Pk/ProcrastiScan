@@ -1,6 +1,18 @@
+# ProcrastiScan
+Downloads:
+
+[Firefox](https://addons.mozilla.org/en-US/firefox/addon/procrastiscan/) | [Chrome, MS Edge, Opera](https://chromewebstore.google.com/detail/procrastiscan/pjieainhjbcopkledhjjlnajfelblpnp)
+
+[Extension Server](https://github.com/Marc-Pk/ProcrastiScan/releases)
+
+ProcrastiScan helps you stay focused and productive by continually checking if the content you're viewing aligns with what you actually want to be doing. 
+
+**Currently, the extension is in the stage of being a proof of concept study for a bachelor's thesis. For the duration of the study (approximately till the end of June), the extension will be in a limited state (see the "Study Conditions" section).**
+
+
+
 
 # Table of Contents
-* [About](#about)
 * [Features](#features)
 * [Installation](#installation)
 * [Study Conditions](#study-conditions)
@@ -8,42 +20,37 @@
 * [Privacy](#privacy)
 * [FAQ](#faq)
 
-# About
-
-ProcrastiScan helps you stay focused and productive by continually checking if the content you're viewing aligns with what you actually want to be doing. 
-
-**Currently, the extension is in the stage of being a proof of concept study for a bachelor's thesis. For the duration of the study (approximately till the end of June), the extension will be in a limited state (see the "Study Conditions" section).**
 
 ## Features
-
-- **Theme Nudging**: Your browser toolbar will be colored in a bright red tone if you get distracted to increase your mindfulness.
+- **LLM-assisted Conversation**: Engage in a focused conversation with an AI assistant to get back on track or reflect on why you got distracted.
 
 - **Identify Distracting Tabs**: Automatically identify tabs that are likely unrelated to your current task and decide whether to close them or save them for later.
 
-- **LLM-assisted Conversation**: Engage in a focused conversation with an AI assistant to get back on track or reflect on why you got distracted.
+- **Theme Nudging (Firefox only)**: Your browser toolbar will be colored in a bright red tone if you get distracted to increase your mindfulness.
 
 - **Dashboard**: View your similarity score history and see when you were most focused or distracted. 
 ## Installation
 
 ### Step 1: Set up the extension server
-#### Option 1, using Python:
+#### Option 1, no Python required: 
+1. Download the procrastiscan-server-v1.1.0.exe file [here](https://github.com/Marc-Pk/ProcrastiScan/releases) and save it in a new folder.
+2. Launch the server by double-clicking the .exe file.
+
+#### Option 2, using Python:
 1. Install Python if you don't have it already.
 2. Clone or download this repository.
 3. Right-click while holding the Shift key inside the installation folder and select "Open in Terminal".
 4. Install the required Python dependencies by running `pip install -r requirements.txt`.
 5. Launch the server script by executing `python server.py`. 
 
-#### Option 2, without Python: 
-1. Download the procrastiscan-server-v1.1.0.exe file [here](https://github.com/Marc-Pk/ProcrastiScan/releases/tag/release) and save it in a new folder.
-2. Launch the server by double-clicking the .exe file.
 
-**The ProcrastiScan server must be running at all times for the extension to work.**
+**The extension server must be running at all times for the extension to work.**
 
 ### Step 2: Set up the LLM server
-Install a LLM-server if you don't have one already or prefer an external API service. You can use any OpenAI-like API provider you prefer to connect to a language model. For example, here are the steps for LMStudio:
+Install a LLM-server if you don't have one already or prefer an external API service. You can use any OpenAI-like API provider you like to connect to a language model. For example, here are the steps for LMStudio:
 
 1. Download [LMStudio](https://lmstudio.ai/)
-2. Launch the program and download a LLM. Llama 3 - 8B Instruct is recommended, but if you have a weak computer you can use a smaller model such as Gemma 2B Instruct.
+2. Launch the program and download a LLM. Llama 3 - 8B Instruct is recommended, but if you have a weak computer you can try a smaller model such as Gemma 2B Instruct. 
 3. Go to the "Local Server" tab and load the model you downloaded.
 4. Under "Configuration", set the server port to 5000 and make sure that "Apply Prompt Formatting" is switched on.
 5. Click "Start Server" and press the below button.
@@ -57,7 +64,7 @@ You can get it [here](https://addons.mozilla.org/en-US/firefox/addon/procrastisc
 
 For the duration of the study, this addon has several limitations:
 
-- every 3 days, the "triggerable" feature will change. This means the default intervention (distraction list, chatbot, and nudging if you use Firefox) that will be enacted when the addon considers you to get distracted. **In the end, there will be a 3 day baseline period where no interventions will be triggered automatically**
+- every 3 days, the "triggerable" feature will change. This means the default intervention (distraction list, chatbot, and nudging if you use Firefox) that will be enacted when the addon considers you to get distracted. In the end, there will be a 3 day baseline period where no interventions will be triggered automatically
 
 - you can participate in a raffle if you complete the full study (12 days for Firefox / 9 days for other browsers), two winners will receive 20€ each
 
@@ -71,9 +78,9 @@ For the duration of the study, this addon has several limitations:
 
 2. The extension will continuously monitor your browsing activity and provide a similarity rating based on the content you're viewing and your specified task.
 
-3. If you encounter distracting tabs or websites, the extension will prompt you with options to close, save, or manage those distractions.
+3. If you get distracted, the extension will intervene
 
-4. You can access the extension's user interface by clicking the icon in your browser's toolbar. From there, you can update your task and content information, view the procrastination list, or engage in a focused conversation with the AI assistant.
+4. You can access the extension's user interface by clicking the icon in your browser's toolbar. From there, you can update your task and content information, view the procrastination list, engage in a focused conversation with the AI assistant or view your score history.
 
 ## Privacy
 
