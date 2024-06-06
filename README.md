@@ -21,7 +21,7 @@ ProcrastiScan helps you stay focused and productive by continually checking if t
 * [FAQ](#faq)
 
 
-## Features
+# Features
 - **LLM-assisted Conversation**: Engage in a focused conversation with an AI assistant to get back on track or reflect on why you got distracted.
 
 - **Identify Distracting Tabs**: Automatically identify tabs that are likely unrelated to your current task and decide whether to close them or save them for later.
@@ -29,7 +29,7 @@ ProcrastiScan helps you stay focused and productive by continually checking if t
 - **Theme Nudging (Firefox only)**: Your browser toolbar will be colored in a bright red tone if you get distracted to increase your mindfulness.
 
 - **Dashboard**: View your similarity score history and see when you were most focused or distracted. 
-## Installation
+# Installation
 
 ### Step 1: Set up the extension server
 #### Option 1, no Python required: 
@@ -56,11 +56,11 @@ Install a LLM-server if you don't have one already or prefer an external API ser
 5. Click "Start Server" and press the below button.
 
 ### Step 3: Download the browser extension
-You can get it [here](https://addons.mozilla.org/en-US/firefox/addon/procrastiscan/) for Firefox or [here](https://chromewebstore.google.com/detail/procrastiscan/pjieainhjbcopkledhjjlnajfelblpnp) for Chrome and other browsers. After installation, you will be guided through the setup process.
+You can get it [here](https://addons.mozilla.org/en-US/firefox/addon/procrastiscan/) for Firefox or [here](https://chromewebstore.google.com/detail/procrastiscan/pjieainhjbcopkledhjjlnajfelblpnp) for Chrome and other browsers. After installation, you will be guided through the setup process. **Please note that there is a bug** causing you to be redirected to a previous page while entering your task, related content and common distractions during the onboarding. You can use placeholder values during the initial setup and then fill in proper values in the extension popup.
 
 **If you restart your computer at any point instead of waking it up from sleep, you will need to restart both servers.**
 
-## Study Conditions
+# Study Conditions
 
 For the duration of the study, this addon has several limitations:
 
@@ -72,7 +72,7 @@ For the duration of the study, this addon has several limitations:
 
 - the extension will collect limited data exclusively for the purpose of this study. See the [Privacy section](#privacy) for more information.
 
-## How it Works
+# How it Works
 
 1. After installing the extension, you'll be guided through a setup process. Here, you'll provide details about your current task, related content, and common distractions.
 
@@ -82,7 +82,7 @@ For the duration of the study, this addon has several limitations:
 
 4. You can access the extension's user interface by clicking the icon in your browser's toolbar. From there, you can update your task and content information, view the procrastination list, engage in a focused conversation with the AI assistant or view your score history.
 
-## Privacy
+# Privacy
 
 ### Processing
 
@@ -105,7 +105,7 @@ To exercise your GDPR-related rights or in case of any questions, contact me at 
 Everything is stored and processed on your device only unless you manually choose to use an external LLM API service. There will be no data collection after the study is over. 
 
 
-## FAQ
+# FAQ
 
 ### Which browsers and operating systems are supported?
 ProcrastiScan only works with Windows currently. Firefox is the only browser to include the nudging intervention. Chrome is supported and the respective extension should also be compatible with Opera and MS Edge.
