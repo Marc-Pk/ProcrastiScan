@@ -7,7 +7,7 @@ Downloads:
 
 ProcrastiScan helps you stay focused and productive by continually checking if the content you're viewing aligns with what you actually want to be doing. 
 
-**Currently, the extension is in the stage of being a proof of concept study for a bachelor's thesis. For the duration of the study (approximately till the end of June), the extension will be in a limited state (see the "Study Conditions" section).**
+**Currently, the extension is in the stage of being a proof of concept study for a bachelor's thesis. Until a non-study version is released (planned for August 2024), the extension will be in a limited state (see the "Study Conditions" section).**
 
 
 
@@ -62,6 +62,8 @@ You can get it [here](https://addons.mozilla.org/en-US/firefox/addon/procrastisc
 
 # Study Conditions
 
+**Note: The study participation phase is completed. You can use the extension with its current limitations and study-related features, but potentially collected results won't be used for the study, and you won't be able to participate in the raffle. A proper working release is planned for August 2024.**
+
 For the duration of the study, this addon has several limitations:
 
 - every 3 days, the "triggerable" feature will change. This means the default intervention (distraction list, chatbot, and nudging if you use Firefox) that will be enacted when the addon considers you to get distracted. In the end, there will be a 3 day baseline period where no interventions will be triggered automatically
@@ -102,7 +104,7 @@ To exercise your GDPR-related rights or in case of any questions, contact me at 
 
 ### After the study
 
-Everything is stored and processed on your device only unless you manually choose to use an external LLM API service. There will be no data collection after the study is over. 
+Everything is stored and processed on your device only unless you manually choose to use an external LLM API service. There will be no data collection after the study version is superseded by a full release. 
 
 
 # FAQ
@@ -113,6 +115,7 @@ ProcrastiScan only works with Windows currently. Firefox is the only browser to 
 ### What are limitations I should be aware of?
 Technical: 
 - You will run into trouble if you use different browsers at the same time. Do not install the extension on multiple browsers.
+- There are bugs that cause activity outside the browser to not be recorded in some cases
 
 Functional:
 - ProcrastiScan currently can't help you in regards to endless scrolling on the same page or falling into rabbit holes about random topics you didn't include in the distracting topics list.
