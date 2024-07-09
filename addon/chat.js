@@ -1,23 +1,10 @@
-// chat.js - llm interaction
-browser.runtime.onMessage.addListener(request => {
-  if (request.type === 'suggestion') {
-    replacePlaceholder(request.suggestion);
-    // Enable send button after response is received
-    enableSendButton();
-  }
-});
-
-
+// chat.js - interaction with the interventions
 document.addEventListener('DOMContentLoaded', () => {
   if (document.getElementById('chat-container') !== null) {
-    initializeTrackingData().then(() => {
       loadConversation();
       setEventListeners();
-    });
-  }
-
+  };
 });
-
 
 // Replace the placeholder message with the actual suggestion
 function replacePlaceholder(suggestion) {
@@ -67,21 +54,21 @@ function sendMessage() {
   const message = inputField.value.trim();
   
   disableSendButton();
-  storeMessageInConversation('User', message).then(conversation => {
-    sendConversationToBackgroundScript(conversation);
+  storeMessageInConversation('User', message).then(messageHistory => {
+    llmConversation(messageHistory);
   });
   inputField.value = '';
   loadConversation();
 }
 
-// Intervene with a basic prompt
+// Intervene with a basic prompt. Currently unused.
 function interveneBasicPrompt() {
   // Fetch variables from storage
   browser.storage.local.get(['task', 'relatedContent']).then(({ task, relatedContent }) => {
     const message = `Hey, I'm currently procrastinating on the following task: ${task}. Here are some examples of what kinds of content might be relevant to my task: ${relatedContent}. Could you help me get back on track?`;
 
-    storeMessageInConversation('User', message).then(conversation => {
-      sendConversationToBackgroundScript(conversation);
+    storeMessageInConversation('User', message).then(messageHistory => {
+      llmConversation(messageHistory);
     });
   });
 }
@@ -147,63 +134,59 @@ function loadConversation() {
   .then(conversation => {
     renderConversation(conversation);
 
-    // Handle distracting tabs if they exist and show interactive buttons
     browser.storage.local.get(['distractingTabs', 'chatbotInterventionTriggered']).then(({ distractingTabs, chatbotInterventionTriggered }) => {
+      // Handle distracting tabs if they exist and show interactive buttons
       if (distractingTabs) {
         const chatContainer = document.getElementById('chat-container');
+        const lastMessage = chatContainer.lastElementChild;
+
+        // Create checkboxes for each distracting tab
+        const checkboxesHtml = distractingTabs.map((tab, index) => `
+          <div>
+            <input type="checkbox" id="tab-${index}" checked>
+            <label for="tab-${index}">${tab.title} (${tab.url})</label>
+          </div>
+        `).join('');
+
+        lastMessage.innerHTML = `It looks like you have some distracting tabs open:<br><br>${checkboxesHtml}<br><br>What would you like to do with them?`;
+
         const actionsContainer = document.createElement('div');
         actionsContainer.classList.add('actions-container');
 
         const buttonsContainer = document.createElement('div');
         buttonsContainer.classList.add('button-container');
 
-        // Define handleButtonAction as a function
         function handleButtonAction(action, distractingTabs) {
           return () => {
-            // Store the button action name as a user message
-            browser.storage.local.get(['listTrackingData', 'distractingEntries']).then(data => {
-              if (!data.distractingEntries) {
-                data.distractingEntries = [];
+            const selectedTabs = distractingTabs.filter((tab, index) => 
+              document.getElementById(`tab-${index}`).checked
+            );
+        
+            storeMessageInConversation('User', action, false).then(() => {
+              // Perform action based on the button clicked
+              switch (action) {
+                case 'Close Tabs':
+                  closeDistractingTabs(selectedTabs);
+                  break;
+                case 'Save Tabs to Procrastination List':
+                  saveDistractingTabs(selectedTabs);
+                  break;
+                case 'Save and Close Tabs':
+                  saveDistractingTabs(selectedTabs);
+                  closeDistractingTabs(selectedTabs);
+                  break;
+                case 'Do Nothing':
+                  break;
+                default:
+                  break;
               }
-              const listTrackingData = data.listTrackingData;
-              listTrackingData.nTabsInList = data.distractingEntries.length || 0;
-              storeMessageInConversation('User', action, false).then(() => {
-                // Perform action based on the button clicked
-                switch (action) {
-                  case 'Close Tabs':
-                    listTrackingData.optionChosen = 'Close Tabs';
-                    listTrackingData.nTabsClosed = distractingTabs.length;
-                    closeDistractingTabs(distractingTabs);
-                    break;
-                  case 'Save Tabs to Procrastination List':
-                    listTrackingData.optionChosen = 'Save Tabs to Procrastination List';
-                    listTrackingData.nTabsToList = distractingTabs.length;
-                    saveDistractingTabs(distractingTabs);
-                    break;
-                  case 'Save and Close Tabs':
-                    listTrackingData.optionChosen = 'Save and Close Tabs';
-                    listTrackingData.nTabsToList = distractingTabs.length;
-                    listTrackingData.nTabsClosed = distractingTabs.length;
-                    saveDistractingTabs(distractingTabs);
-                    closeDistractingTabs(distractingTabs);
-                    break;
-                  case 'Do Nothing':
-                    listTrackingData.optionChosen = 'Do Nothing';
-                    break;
-                  default:
-                    break;
-                }
-                browser.storage.local.set({ listTrackingData }).then(() => {
-                  // Remove the distractingTabs variable and re-enable send button
-                  browser.storage.local.remove('distractingTabs').then(() => {
-                    enableSendButton();
-                    loadConversation();
-                  });
+              browser.storage.local.remove('distractingTabs').then(() => {
+                enableSendButton();
+                loadConversation();
               });
             });
-          });
-        };
-      }
+          };
+        }
 
       const closeTabsButton = document.createElement('button');
       closeTabsButton.textContent = 'Close Tabs';
@@ -247,8 +230,8 @@ function loadConversation() {
       yesButton.classList.add('btn', 'btn-primary');
       yesButton.addEventListener('click', () => {
         browser.storage.local.remove('chatbotInterventionTriggered');
-        storeMessageInConversation('User', "Yes").then(conversation => {
-          sendConversationToBackgroundScript(conversation);
+        storeMessageInConversation('User', "Yes").then(messageHistory => {
+          llmConversation(messageHistory);
         });
       });
       buttonsContainer.appendChild(yesButton);
@@ -259,7 +242,7 @@ function loadConversation() {
       noButton.addEventListener('click', () => {
         browser.storage.local.remove(['chatbotInterventionTriggered']);
         storeMessageInConversation('User', "No", false).then(() => {
-          sendTrackingData();
+          window.close();
         });
       });
       buttonsContainer.appendChild(noButton);
@@ -314,12 +297,6 @@ function storeConversation(conversation) {
   return browser.storage.local.set({ conversation });
 }
 
-// Send conversation to background script
-function sendConversationToBackgroundScript(conversation) {
-  const conversationWithoutPlaceholder = conversation.filter(msg => msg.sender !== 'Assistant' || msg.message !== '...');
-  browser.runtime.sendMessage({ type: 'sendLLMMessage', conversation: conversationWithoutPlaceholder }).then(loadConversation);
-}
-
 // Disable send button
 function disableSendButton() {
   document.getElementById('sendMessageBtn').disabled = true;
@@ -336,18 +313,18 @@ function enableSendButton() {
   document.getElementById('interveneBasicPromptBtn').style.opacity = '1';
 }
 
-function closeDistractingTabs(distractingTabs) {
-  const distractingTabIds = distractingTabs.map(tab => tab.id);
-  browser.tabs.remove(distractingTabIds);
+function closeDistractingTabs(selectedTabs) {
+  const selectedTabIds = selectedTabs.map(tab => tab.id);
+  browser.tabs.remove(selectedTabIds);
 }
 
-async function saveDistractingTabs(distractingTabs) {
+async function saveDistractingTabs(selectedTabs) {
   // Get existing distracting entries from local storage
   const storedData = await browser.storage.local.get('distractingEntries');
   const existingDistractingEntries = storedData.distractingEntries || [];
 
-  // Create new entries from distractingTabs
-  const newEntries = distractingTabs.map(tab => ({
+  // Create new entries from selected tabs
+  const newEntries = selectedTabs.map(tab => ({
     title: tab.title,
     url: tab.url,
     timestamp: new Date().getTime()
@@ -367,78 +344,59 @@ async function saveDistractingTabs(distractingTabs) {
   await browser.storage.local.set({ distractingEntries: existingDistractingEntries });
 }
 
-// Initialize the tracking data based on the intervention type
-function initializeTrackingData() {
-  return browser.storage.local.get(['listInterventionTriggered', 'chatbotInterventionTriggered', 'distractingTabs', 'distractingEntries']).then(data => {
-    if (data.listInterventionTriggered !== undefined) {
-      let nTabsOpenDistracting = 0;
-      let nTabsInList = 0;
-      if (data.distractingTabs !== undefined) {
-        nTabsOpenDistracting = data.distractingTabs.length;
-      }
-      if (data.distractingEntries !== undefined) {
-        nTabsInList = data.distractingEntries.length;
-      }
-      browser.tabs.query({}).then(tabs => {
-        const listTrackingData = {
-          isTriggered: data.listInterventionTriggered || false,
-          startTime: new Date().toLocaleString(),
-          nTabsOpenDistracting: nTabsOpenDistracting,
-          nTabsInList: nTabsInList,
-          nTabsOpenTotal: tabs.length,
-          nTabsRetrieved: -1
-        };
-        browser.storage.local.set({ listTrackingData });
-      });
-    }
-    
-    else if (data.chatbotInterventionTriggered) {
-      const chatbotTrackingData = {
-        isTriggered: data.chatbotInterventionTriggered || false,
-        startTime: new Date().getTime()
-      };
-      browser.storage.local.set({ chatbotTrackingData });
-    } 
+// Basic interaction with the chatbot
+async function llmConversation(messageHistory) {
+  messageHistory = await messageHistory.filter(msg => msg.sender !== 'Assistant' || msg.message !== '...')
+  console.log(messageHistory);
+  loadConversation();
+
+  let task, relatedContent, commonDistractions, llmPort;
+  await browser.storage.local.get(['task', 'relatedContent', 'commonDistractions', 'settings']).then(result => {
+    task = result.task;
+    relatedContent = result.relatedContent;
+    commonDistractions = result.commonDistractions;
+    llmPort = result.settings.llmPort;
   });
-}
 
-// Send tracking data when the chat window is closed
-function sendTrackingData() {
-  console.log("chat window closing")
-  browser.storage.local.get(["chatbotTrackingData", "listTrackingData", "conversation"]).then(result => {
-    if (result.listTrackingData) {
-      console.log("list closed")
-      const listTrackingData = result.listTrackingData;
-      listTrackingData.nTabsClosed = listTrackingData.nTabsClosed || 0;
-      listTrackingData.nTabsToList = listTrackingData.nTabsToList || 0;
-      listTrackingData.optionChosen = listTrackingData.optionChosen || 'Window Closed';
+  const systemPrompt = `
+You are a compassionate and non-judgmental assistant who is helping a user overcome distractions and stay focused on their goals. You do NOT give unsolicited advice and focus on being supportive and understanding. You take care to not make the user feel ashamed or guilty about their distractions.
+Here is some information about the user:
+Current task: ${task}
+Examples of useful content for the task: ${relatedContent}
+Common distractions of the user: ${commonDistractions}
+Ask the user how they feel right now. You do NOT confront the user with the assumption that they could be distracted. You do NOT refer to the user information unless asked to. Your answers have at most 20 words unless the user specifically asks for a longer answer. You talk in a casual, concise and to the point-style just like the user, using the tone of a friend.
+`;
 
-
-      browser.storage.local.set({ listTrackingDataTemp: listTrackingData});
-      browser.storage.local.remove(["listTrackingData", "listInterventionTriggered"]);
-
-    }
-    else if (result.chatbotTrackingData) {
-      console.log("chat closed")
-      const conversationData = result.conversation || [];
-      const chatbotTrackingData = result.chatbotTrackingData;
-      
-      chatbotTrackingData.nTotalMessages = conversationData.filter(msg => msg.message !== '...').length;
-      chatbotTrackingData.nUserMessages = conversationData.filter(msg => msg.sender === "User").length;
-      chatbotTrackingData.timeSpent = new Date().getTime() - chatbotTrackingData.startTime;
-      
-      console.log(chatbotTrackingData)
-      browser.storage.local.set({ chatbotTrackingDataTemp: chatbotTrackingData});
-      browser.storage.local.remove(["chatbotTrackingData", "chatbotInterventionTriggered"]);
-    }
-  }).then(() => {
-    window.close();
+  messageHistory = [
+    { role: "system", content: systemPrompt },
+    ...messageHistory.map(item => ({
+      role: item.sender.toLowerCase(),
+      content: item.message
+    }))
+  ];
+  
+  const response = await fetch(`http://localhost:${llmPort}/v1/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: "gpt-3.5-turbo",
+      messages: messageHistory,
+      max_tokens: 100,
+      temperature: 0,
+      repetition_penalty: 1.15,
+      stop: ["user", "assistant", "\n", "User", "Assistant"]
+    })
   });
-}
 
-// Add event listener for window or tab close
-window.addEventListener('blur', sendTrackingData);
-
-window.addEventListener('beforeunload', () =>{
-  window.blur();
-});
+  const data = await response.json();
+  console.log();
+  let llmOutput = data.choices[0].message.content
+  .replace(/\\n/g, "\n")
+  .replace(/Assistant:/, "")
+  .replace(/<assistant>/g, "");
+  console.log(llmOutput);
+  replacePlaceholder(llmOutput);
+  enableSendButton();
+};

@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "ProcrastiScan",
+  "version": "2.0.0",
+  "description": "A new approach to detecting procrastination",
+  "icons": {
+    "128": "assets/procrastiscan-icon-128px.png"
+  },
+  "permissions": [
+    "tabs",
+    "webNavigation",
+    "storage",
+    "theme"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
+  },
+  "host_permissions": ["http://localhost/*"],
+  "background": {
+    "scripts": ["background.js"],  
+    "service_worker": "background.js",  
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "options_ui": {
+    "page": "settings.html",
+    "open_in_tab": true
+  }
+}

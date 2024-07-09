@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Settings - ProcrastiScan</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootswatch/4.3.1/darkly/bootstrap.min.css">
+  <style>
+    body {
+      padding: 15px;
+      min-width: 800px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+    .connectionStatusIndicator {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .container {
+      display: flex;
+    }
+    .settings-form {
+      flex: 1;
+    }
+    .llm-settings {
+      margin-left: 50px;
+    }
+  </style>
+</head>
+<body>
+  <div>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+      <a class="navbar-brand">
+        <img src="assets/procrastiscan-icon-inv-128px.png" width="30" height="30">
+      </a>
+      <ul class="navbar-nav flex-row mr-auto">
+        <li class="nav-item" style="margin-right: 10px">
+          <a class="nav-link" href="popup.html" id="routeToHomeBtn">Overview</a>
+        </li>
+        <li class="nav-item" style="margin-right: 10px">
+          <a class="nav-link" href="list.html" id="routeToListBtn">Procrastination List</a>
+        </li>
+        <li class="nav-item" style="margin-right: 10px">
+          <a class="nav-link" href="chat.html" id="routeToChatBtn">Chat</a>
+        </li>
+        <li class="nav-item" style="margin-right: 10px">
+          <a class="nav-link" href="dashboard.html" id="routeToDashboardBtn">Statistics</a>
+        </li>
+        <li class="nav-item" style="margin-right: 10px">
+          <a class="nav-link" href="settings.html" id="routeToSettingsBtn">Settings</a>
+        </li>
+      </ul>
+    </nav>
+    <div style="text-align: center;">
+      <h6>Hover over the settings items for details. Check out the <a href="https://github.com/Marc-Pk/ProcrastiScan/#advanced-setup" target="_blank">documentation</a> for a detailed guide.</h6> 
+    </div>
+    <div class="container">
+      <div class="settings-form">
+        <h4>Intervention Settings</h4>
+        <form>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="interventionOptions" id="nudgingOption" value="nudging">
+            <label class="form-check-label" for="nudgingOption" title="">
+              Color the toolbar based on the distraction level
+            </label>
+          </div>
+          <h5 title="What intervention should be triggered if you get distracted (the averaged similarity score falls below 0.5)?">Triggered Intervention </h5>
+          <div class="form-check none" title="No intervention will be triggered if you get distracted">
+            <input class="form-check-input" type="radio" name="interventionOptions" id="NoInterventionOption" value="none" checked>
+            <label class="form-check-label" for="NoInterventionOption">
+              None
+            </label>
+          </div>
+          <div class="form-check procrastinationList" title="Irrelevant tabs are automatically selected, you can then choose to close them or save them to the Procrastination List tab">
+            <input class="form-check-input" type="radio" name="interventionOptions" id="procrastinationListOption" value="procrastinationList">
+            <label class="form-check-label" for="procrastinationListOption">
+              Procrastination List
+            </label>
+          </div>
+          <div class="form-check chatbot" title="A chatbot will help you get back to your task. Requires the LLM connection to be set up">
+            <input class="form-check-input" type="radio" name="interventionOptions" id="chatbotOption" value="chatbot">
+            <label class="form-check-label" for="chatbotOption">
+              Chatbot
+            </label>
+            <span id="chatbotWarning" class="badge badge-danger" style="display: inline;" title="LLM is disconnected. The chatbot intervention will not work">⚠️</span>
+          </div>
+        </form>
+      </div>
+      <div class="llm-settings">
+        <h4>Optional Connections</h4>
+        <div class="pythonServerConnectionStatusIndicator connectionStatusIndicator">
+          <span title="Optional python server connection, used to score any programs instead of just tabs">Server Connection Status:</span>
+          <span class="badge badge-success" style="display: none;" id="pythonServerConnected">Connected</span>
+          <span class="badge badge-warning" style="display: inline;" id="pythonServerFetching">Fetching...</span>
+          <span class="badge badge-danger" style="display: none;" id="pythonServerDisconnected">Disconnected</span>
+        </div>
+        <div class="form-group">
+          <div class="llmConnectionStatusIndicator connectionStatusIndicator">
+            <span title="LLM connection for the chatbot intervention">LLM Connection Status: </span>
+            <span class="badge badge-success" style="display: none;" id="llmConnected">Connected</span>
+            <span class="badge badge-warning" style="display: inline;" id="llmFetching">Fetching...</span>
+            <span class="badge badge-danger" style="display: none;" id="llmDisconnected">Disconnected</span>
+          </div>
+          <div style="display: flex; align-items: center;">
+            <label for="llmPort" title="You can connect to a local LLM using an OpenAI-compatible API, which is required for the chatbot intervention. Enter the port number here" style="margin-right: 10px;">LLM Port:</label>
+            <input type="text" class="form-control" style="  flex: 1;" id="llmPort" value="5000">
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="lib/browser-polyfill.js"></script>
+    <script src="settings.js"></script>
+  </div>
+</body>
+</html>

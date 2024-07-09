@@ -7,122 +7,80 @@ Downloads:
 
 ProcrastiScan helps you stay focused and productive by continually checking if the content you're viewing aligns with what you actually want to be doing. 
 
-**Currently, the extension is in the stage of being a proof of concept study for a bachelor's thesis. Until a non-study version is released (planned for August 2024), the extension will be in a limited state (see the "Study Conditions" section).**
-
-
+As you browse, a task-relevance score (**"similarity rating"**) is calculated for every tab, based on the content you're viewing and a specified task. The higher the score, the more relevant the content is to your task. An averaged score (**"mean rating"**) is calculated to reflect your current level of focus. If it falls below 0.5, the extension considers you to be distracted and intervenes according to the settings.
 
 
 # Table of Contents
 * [Features](#features)
-* [Installation](#installation)
-* [Study Conditions](#study-conditions)
-* [How it Works](#how-it-works)
-* [Privacy](#privacy)
+* [Quick Setup](#quick-setup)
+* [Advanced Setup](#advanced-setup)
+  * [Extension Server](#how-to-set-up-the-extension-server)
+  * [LLM Server](#how-to-set-up-the-llm-server)
+* [Privacy Information](#privacy-information)
 * [FAQ](#faq)
 
 
 # Features
-- **LLM-assisted Conversation**: Engage in a focused conversation with an AI assistant to get back on track or reflect on why you got distracted.
+- **LLM-assisted Conversation**: Engage in a focused conversation with an AI assistant to get back on track or reflect on why you got distracted. Requires a LLM connection.
 
 - **Identify Distracting Tabs**: Automatically identify tabs that are likely unrelated to your current task and decide whether to close them or save them for later.
 
 - **Theme Nudging (Firefox only)**: Your browser toolbar will be colored in a bright red tone if you get distracted to increase your mindfulness.
 
 - **Dashboard**: View your similarity score history and see when you were most focused or distracted. 
-# Installation
 
-### Step 1: Set up the extension server
-#### Option 1, no Python required: 
-1. Download the procrastiscan-server-v1.1.0.exe file [here](https://github.com/Marc-Pk/ProcrastiScan/releases) and save it in a new folder.
-2. Launch the server by double-clicking the .exe file.
+# Quick Setup
 
-#### Option 2, using Python:
-1. Install Python if you don't have it already.
-2. Clone or download this repository.
-3. Right-click while holding the Shift key inside the installation folder and select "Open in Terminal".
-4. Install the required Python dependencies by running `pip install -r requirements.txt`.
-5. Launch the server script by executing `python server.py`. 
+After installing the extension, the "Settings" page should open. Select the features you want and then open the "Overview" tab to provide details about your current task, related content, and common distractions. When you're done, click "Save Settings".
 
+You can access the extension's interface by clicking the icon in your browser's toolbar. From there, you can update your task and related/distracting content information, interact with the procrastination list, engage in a focused conversation with the AI assistant or view your score history. For quick access, it is recommended to pin the extension icon to your browser's toolbar.
+# Advanced Setup
 
-**The extension server must be running at all times for the extension to work.**
+You can extend ProcrastiScan in two optional ways:
 
-### Step 2: Set up the LLM server
-Install a LLM-server if you don't have one already or prefer an external API service. You can use any OpenAI-like API provider you like to connect to a language model. For example, here are the steps for LMStudio:
-
-1. Download [LMStudio](https://lmstudio.ai/)
-2. Launch the program and download a LLM. Llama 3 - 8B Instruct is recommended, but if you have a weak computer you can try a smaller model such as Gemma 2B Instruct. 
-3. Go to the "Local Server" tab and load the model you downloaded.
-4. Under "Configuration", set the server port to 5000 and make sure that "Apply Prompt Formatting" is switched on.
-5. Click "Start Server" and press the below button.
-
-### Step 3: Download the browser extension
-You can get it [here](https://addons.mozilla.org/en-US/firefox/addon/procrastiscan/) for Firefox or [here](https://chromewebstore.google.com/detail/procrastiscan/pjieainhjbcopkledhjjlnajfelblpnp) for Chrome and other browsers. After installation, you will be guided through the setup process. **Please note that there is a bug** causing you to be redirected to a previous page while entering your task, related content and common distractions during the onboarding. You can use placeholder values during the initial setup and then fill in proper values in the extension popup.
+- score all programs instead of just browser tabs -> set up the **extension server**
+- chatbot intervention -> set up a **LLM server**
 
 **If you restart your computer at any point instead of waking it up from sleep, you will need to restart both servers.**
 
-# Study Conditions
+### How to set up the extension server:
+#### Option 1, no Python required: 
+1. Download the procrastiscan-server-v2.0.0.exe file [here](https://github.com/Marc-Pk/ProcrastiScan/releases).
+2. Launch the server by double-clicking the .exe file. Your anti-virus software might flag the file - if you're concerned about security, you can use the Python method described below instead and check the source code of the `procrastiscan-server.py` file.
 
-**Note: The study participation phase is completed. You can use the extension with its current limitations and study-related features, but potentially collected results won't be used for the study, and you won't be able to participate in the raffle. A proper working release is planned for August 2024.**
+#### Option 2, using Python:
+1. Install Python if you don't have it already.
+2. Clone this repository or download the `procrastiscan-server.py` and `requirements.txt` files.
+3. Right-click while holding the Shift key inside the installation folder and select "Open in Terminal".
+4. Install the required Python dependencies by running `pip install -r requirements.txt`.
+5. Launch the server script by executing `python procrastiscan-server.py`. 
 
-For the duration of the study, this addon has several limitations:
 
-- every 3 days, the "triggerable" feature will change. This means the default intervention (distraction list, chatbot, and nudging if you use Firefox) that will be enacted when the addon considers you to get distracted. In the end, there will be a 3 day baseline period where no interventions will be triggered automatically
+### How to set up the LLM server
+Install a LLM-server if you don't have one already. Your computer will need to have at least 8GB of RAM available. You can use any OpenAI-like API provider you like to connect to a language model. For example, here are the steps for LMStudio:
 
-- you can participate in a raffle if you complete the full study (12 days for Firefox / 9 days for other browsers), two winners will receive 20€ each
+1. Download [LMStudio](https://lmstudio.ai/)
+2. Launch the program and download a LLM. Llama-3-8B Instruct is recommended.
+3. Go to the "Local Server" tab and load the model you downloaded.
+4. Under "Configuration", set the server port to 5000 and make sure that "Apply Prompt Formatting" is switched on. If you want to use a different port, open the ProcrastiScan settings tab and change the "LLM Port" value.
+5. Click "Start Server" and press the below button.
 
-- you will be prompted to enter how stressed and distracted you feel once per hour
+# Privacy Information
 
-- the extension will collect limited data exclusively for the purpose of this study. See the [Privacy section](#privacy) for more information.
-
-# How it Works
-
-1. After installing the extension, you'll be guided through a setup process. Here, you'll provide details about your current task, related content, and common distractions.
-
-2. The extension will continuously monitor your browsing activity and provide a similarity rating based on the content you're viewing and your specified task.
-
-3. If you get distracted, the extension will intervene
-
-4. You can access the extension's user interface by clicking the icon in your browser's toolbar. From there, you can update your task and content information, view the procrastination list, engage in a focused conversation with the AI assistant or view your score history.
-
-# Privacy
-
-### Processing
-
-ProcrastiScan works completely offline and does not send any data to external servers, except for the duration of the study as described below. 
-
-### For the duration of the study
-
-Some data will be sent to a European Google Firebase server every 3 days:
-
-- the extension will prompt you to provide information about your gender, age, whether you are diagnosed with autism/ADHD and optionally your email address if you want to participate in the raffle. Additionally your user agent header and language will be logged. This data is used for analysis and interpretation of the study results. 
-
-- metadata on how you interact with the intervention features. For example, timestamps of when they are triggered, how many tabs are open/closed/saved, whether you click away a popup or interact with it. The extension does **not** send any contextual or personal information such as tab contents, urls, titles, your browsing history or what you talk about with the AI assistant.
-
-- data you provide in self-report popups and the calculated similarity scores
-
-To exercise your GDPR-related rights or in case of any questions, contact me at procrastiscan@gmail.com
-
-### After the study
-
-Everything is stored and processed on your device only unless you manually choose to use an external LLM API service. There will be no data collection after the study version is superseded by a full release. 
-
+ProcrastiScan works completely offline and does not collect any data.
 
 # FAQ
 
 ### Which browsers and operating systems are supported?
-ProcrastiScan only works with Windows currently. Firefox is the only browser to include the nudging intervention. Chrome is supported and the respective extension should also be compatible with Opera and MS Edge.
+ProcrastiScan has only been tested under Windows. Firefox is the only browser to include the nudging intervention. Chrome is supported, and the extension should also be compatible with Opera and MS Edge.
 
 ### What are limitations I should be aware of?
-Technical: 
-- You will run into trouble if you use different browsers at the same time. Do not install the extension on multiple browsers.
-- There are bugs that cause activity outside the browser to not be recorded in some cases
-
-Functional:
-- ProcrastiScan currently can't help you in regards to endless scrolling on the same page or falling into rabbit holes about random topics you didn't include in the distracting topics list.
-- the chatbot experience is limited by the quality of the language model you use and is unlikely to fully grasp the context of your situation.
+- the similarity scoring is mostly a proof of concept at the moment and may not always be accurate. The system might not work well if the information that you provide about your task, related content and common distractions is too vague.
+- ProcrastiScan currently can't help you in regards to endless scrolling on the same page, or falling into rabbit holes about random topics that you didn't include in the distracting topics list.
+- the chatbot experience is limited by the quality of the language model you use. It is unlikely to fully grasp the context of your situation.
 
 ### How does the similarity scoring work?
-The scores are calculated by how semantically similar the tab title + domain is to the information you provided about your task and related/distracting content. The score ranges roughly from 0-1, with values below 0.5 being interpreted as distracting content. 
+The scores quantify how semantically similar the tab title + domain (or program name + title) is to the information that you provided about your task and related/distracting content. The score ranges roughly from 0-1, with values below 0.5 being interpreted as distracting content. An averaged score is calculated for the last 10 minutes and weighted by the time spent on each tab. If this score falls below 0.5, an intervention is triggered.
 
 ### How how can I make the scores closer to what I expect?
-Your information must be semantically related to the content. For example, if you enter "browsing mindlessly" as a distraction, that is not semantically similar to a tab called "Cat Videos - YouTube". If you were to enter "pets" instead, the similarity to the tab title would be a lot higher. However, proper nouns such as specific websites or creator names should be entered as they are.
+Your information must be semantically related to the content ("how much does A have to do with B?"). For example, if you enter "browsing mindlessly" as a distraction, that is not semantically similar to a tab called "Cat Videos - YouTube". If you were to enter "pets" instead, the similarity to the tab title would be a lot higher. However, proper nouns such as specific websites or creator names should be entered as they are.

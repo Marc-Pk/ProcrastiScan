@@ -1,116 +1,209 @@
 // background.js - Background script for the addon
-importScripts("lib/browser-polyfill.js"); // remove this line for Firefox
+import "./lib/browser-polyfill.js";
+import { pipeline, env, cos_sim } from './lib/transformers.min.js';
 
-let lastRating = null;
-let meanRating = null;
-let lastInterventionTime = null;
-let lastSentUrl = null;
-let addonEnabled;
-let popupWindowId = null;
 let interventionWindowId = null;
 let ws;
-let addonInitialized = browser.storage.local.get('addonInitialized') || false;
-let user_info = browser.storage.local.get('user_info') || null;
-browser.storage.local.set({ websocketConnected: false, llmConnected: "waiting" });
+
+// set the environment for the sentence transformer
+env.allowLocalModels = false;
+env.backends.onnx.wasm.numThreads = 1;
+
+const extractor = pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2').then(model => {
+  return model;
+});
+
+//initialize settings
+browser.storage.local.get(['settings']).then(result => {
+
+  if (!result.settings) {
+    browser.storage.local.set({ settings: { availableInterventions: { nudging: false, procrastinationList: false, chatbot: false }, llmPort: 5000 } });
+  }
+
+  browser.storage.local.set({ websocketConnected: false });
+
+}).then(() => {
+  embedUserInfo();
+});
+
+// Get individual embeddings of text items in an array
+async function embedText(texts) {
+  const model = await extractor;
+  const embeddings = [];
+  for (const text of texts) {
+    const output = await model(text.toLowerCase(), { pooling: 'mean', normalize: true });
+    embeddings.push(output.data);
+  }
+  return embeddings;
+}
+
+// Embed the user info
+async function embedUserInfo() {  
+  let task, relatedContent, commonDistractions;
+  await browser.storage.local.get(['task', 'relatedContent', 'commonDistractions']).then(result => {
+    task = [result.task]
+    relatedContent = result.relatedContent.split(', ');
+    commonDistractions = result.commonDistractions.split(', ');
+  });
+  
+  const embeddingsTask = await embedText(task);
+  const embeddingsDistractions = await embedText(commonDistractions);
+  const embeddingsRelatedContent = await embedText(relatedContent)
+  
+  // Convert the embeddings to a serializable format
+  function convertEmbeddingsToArray(embeddings) {
+    return Array.from(embeddings, emb => Array.from(emb));
+  }
+
+  const serializableEmbeddingsTask = convertEmbeddingsToArray(embeddingsTask);
+  const serializableEmbeddingsDistractions = convertEmbeddingsToArray(embeddingsDistractions);
+  const serializableEmbeddingsRelatedContent = convertEmbeddingsToArray(embeddingsRelatedContent);
+
+  // Save the embeddings to local storage
+  await browser.storage.local.set({ embeddingsTask: serializableEmbeddingsTask, embeddingsDistractions: serializableEmbeddingsDistractions, embeddingsRelatedContent: serializableEmbeddingsRelatedContent });
+  console.log("Embeddings updated");
+}
+
+// Calculate and save the TRS
+async function getSimilarityRating({tab, program, save}) {
+  let pageInfo, historyName, embeddingsTask, embeddingsRelatedContent, embeddingsDistractions, similarityRatings;
+  if (tab) {
+    const url = new URL(tab.url);
+    pageInfo = {
+      title: tab.title,
+      url: url.href,
+      domain: url.hostname
+    };
+    historyName = tab.title;
+  }
+  if (program) {
+    pageInfo = {
+      title: program.title,
+      url: program.name,
+      domain: program.name
+    };
+    historyName = program.title + " - " + program.name;
+  }
+
+  if (save) {
+    await browser.storage.local.get(['embeddingsTask', 'embeddingsRelatedContent', 'embeddingsDistractions', 'similarityRatings']).then(result => {
+      embeddingsTask = result.embeddingsTask;
+      embeddingsRelatedContent = result.embeddingsRelatedContent;
+      embeddingsDistractions = result.embeddingsDistractions;
+      similarityRatings = result.similarityRatings || [];
+    });
+    
+    const currentSimilarityRating = await calculateSimilarity(pageInfo, embeddingsTask, embeddingsRelatedContent, embeddingsDistractions);
+    const similarityRatingAvg = await calculateAverageSimilarity(currentSimilarityRating, similarityRatings);
+    const newData = { time: Date.now(), trs: currentSimilarityRating, trsAvg: similarityRatingAvg, title: historyName };
+    similarityRatings.push(newData);
+    browser.storage.local.set({ similarityRatings, lastRating: currentSimilarityRating, meanRating: similarityRatingAvg, currentUrl: pageInfo.url });
+    checkInterventions();
+    return;
+  }
+
+  else {
+    await browser.storage.local.get(['embeddingsTask', 'embeddingsRelatedContent', 'embeddingsDistractions']).then(result => {
+      embeddingsTask = result.embeddingsTask;
+      embeddingsRelatedContent = result.embeddingsRelatedContent;
+      embeddingsDistractions = result.embeddingsDistractions;
+    });
+  
+    const currentSimilarityRating = await calculateSimilarity(pageInfo, embeddingsTask, embeddingsRelatedContent, embeddingsDistractions);
+    return currentSimilarityRating;
+  }
+};
+
+// Calculate the current TRS
+async function calculateSimilarity(pageInfo, embeddingsTask, embeddingsRelatedContent, embeddingsDistractions) {
+  const titleDomain = [`${pageInfo.title.toLowerCase()} ${pageInfo.domain.toLowerCase()}`];
+  const embeddingTitleDomainArray = await embedText(titleDomain);
+  const embeddingTitleDomain = embeddingTitleDomainArray[0]
+
+  const similarityTask = [];
+  const similaritiesDistractions = [];
+  const similaritiesRelatedContent = [];
+
+  // Calculate the individual cosine similarities
+  for (const embedding of embeddingsTask) {
+    similarityTask.push(cos_sim(embedding, embeddingTitleDomain));
+  };
+  for (const embedding of embeddingsDistractions) {
+    similaritiesDistractions.push(cos_sim(embedding, embeddingTitleDomain));
+  };  
+  for (const embedding of embeddingsRelatedContent) {
+    similaritiesRelatedContent.push(cos_sim(embedding, embeddingTitleDomain));
+  };
+
+  // Take the highest individual similarity rating for each category
+  const similarityWebsiteTask = Math.max(...similarityTask);
+  const similarityWebsiteDistractions = Math.max(...similaritiesDistractions);
+  const similarityWebsiteRelatedContent = Math.max(...similaritiesRelatedContent);
+  
+  const similarityRating = ((similarityWebsiteTask + similarityWebsiteRelatedContent - similarityWebsiteDistractions + 1) / 2);
+
+  // round to 3 decimal places
+  return Math.round(similarityRating * 1000) / 1000;
+}
+
+
+// Calculate the average TRS
+async function calculateAverageSimilarity(currentSimilarityRating, similarityRatings, windowLength = 10) {
+  const similarityRatingsTemp = similarityRatings.map(rating => ({ time: rating.time, trs: rating.trs }));
+  similarityRatingsTemp.push({ time: Date.now(), trs: currentSimilarityRating });
+  const endTime = Date.now();
+  const startTime = endTime - windowLength * 60 * 1000; // 10 minutes
+  const windowRatings = similarityRatingsTemp.filter(rating => rating.time > startTime && rating.time <= endTime);
+
+  // Sort ratings by time in descending order
+  windowRatings.sort((a, b) => b.time - a.time);
+
+  // Check if there are enough entries
+  if (windowRatings.length < 2 || (windowRatings.length < 4 && (windowRatings[0].time - windowRatings[1].time) < 15000)) {
+    return NaN;
+  }
+  // time diff between smallest and largest time
+  const totalTimeDiff = windowRatings[0].time - windowRatings[windowRatings.length - 1].time;
+
+  // Calculate time differences to the previous data point
+  const timeDiffs = windowRatings.map((rating, index) => index > 0 ? rating.time - windowRatings[index - 1].time : 0);
+  
+  
+  const weightedRatings = windowRatings.map((rating, index) => {
+    const weight = Math.abs(timeDiffs[index] / totalTimeDiff);
+    return { rating: rating.trs, weight};
+  });
+
+  // Calculate weighted average
+  const weightedSum = weightedRatings.reduce((sum, { rating, weight }) => sum + rating * weight, 0);
+  const totalWeight = weightedRatings.reduce((sum, { weight }) => sum + weight, 0);
+
+  const weightedAverage = weightedSum / totalWeight;
+
+  return Math.round(weightedAverage * 1000) / 1000;
+}  
+
 
 // Function to handle the WebSocket connection
 function startWebSocket() {
   ws = new WebSocket('ws://localhost:8765');
   ws.onopen = function() {
     console.log('Websocket started');
-    // WebSocket connection is open, now messages can be sent
     ws.send(JSON.stringify({ message: 'requestingConnection' }));
-    browser.storage.local.get('addonEnabled').then(result => {
-      addonEnabled = result.addonEnabled !== undefined ? result.addonEnabled : true;
-    });
-    //get initial rating
-    browser.storage.local.get(['meanRating', 'lastRating', 'availableInterventions']).then(result => {
-      rating = result.lastRating;
-      availableInterventions = result.availableInterventions || [];
-      updateIconColor(rating, availableInterventions);
-    });
   };
   // Listen for messages from the WebSocket server
   ws.onmessage = function(event) {
     const response = JSON.parse(event.data);
-    const rating = response.rating;
-    const mean_rating = response.mean_rating !== undefined ? response.mean_rating : meanRating;
-    const user_info = response.user_info;
-    const type = response.type;
 
     // Update the WebSocket connection status
-    if (response.connectionEstablished) {
+    if (response.message == "connectionEstablished") {
       browser.storage.local.set({ websocketConnected: true })
-      setTimeout(function() {
-        ws.send(JSON.stringify({ message: 'getUserInfo' , addonEnabled: addonEnabled}));
-      }, 200);
-      setTimeout(function() {
-        browser.tabs.query({ active: true, currentWindow: true }).then(tabs => {
-          getSimilarityRating(tabs[0]);
-        });
-      }, 200);
       console.log('Websocket connected');
     }
-    // Update the popup fields with the new user info
-    if (user_info) {
-      // Save the info for the popup script
-      browser.storage.local.set({
-        task: user_info.task,
-        relatedContent: user_info.relatedContent,
-        commonDistractions: user_info.commonDistractions
-      });
-    }
 
-    // Update the LLM connection status
-    if (response.testLlm) {
-      console.log('LLM test successful');
-      browser.storage.local.set({ llmConnected: response.testLlm });
-    }
-
-    // Update whether the onboarding has been completed
-    if (response.studyInfoSet) {
-      console.log('Study info set');
-      browser.storage.local.set({ addonInitialized: true });
-    }
-
-    // Open the self-report popup
-    if (response.SelfReportPopup) {
-      openSelfReportPopup();
-    }
-
-    // Update the available interventions
-    if (response.interventionSchedule) {
-      availableInterventions = [response.interventionSchedule[0].interventionType];
-      browser.storage.local.set({ interventionSchedule : response.interventionSchedule, availableInterventions: availableInterventions });
-    }
-
-    // Update the rating if it concerns the browser
-    if (rating && mean_rating && type === 'relevant') {
-      browser.storage.local.set({ lastRating: rating, meanRating: mean_rating, currentUrl: lastSentUrl });
-      console.log(`Received rating from WebSocket server: ${rating}`);
-    }
-
-    // Update keyword suggestions. Currently unused.
-    if (response.keywordSuggestions) {
-      browser.storage.local.set({ keywordSuggestions: response.keywordSuggestions });
-    }
-
-    // Forward LLM messages to the chat script
-    if (response.LLMMessage) {
-      console.log('Received LLM message:', response.LLMMessage);
-      browser.runtime.sendMessage({ type: 'suggestion', suggestion: response.LLMMessage});  
-    }
-
-    // Initialize handling of identified distracting tabs
-    if (response.distractingIndices) {
-      console.log('Received distracting indices');
-      handleDistractingTabs(response.distractingIndices).then(() => {
-      openInterventionPopup();
-      });
-    }
-    if (response.dashboardData) {
-      console.log('Received dashboard data', response.dashboardData);
-      browser.runtime.sendMessage({ type: 'dashboardData', data: response.dashboardData });
+    // Receive the program info from the WebSocket server
+    if (response.programInfo) {
+      getSimilarityRating({ program: response.programInfo, save: true });
     }
   };
 
@@ -132,235 +225,112 @@ function startWebSocket() {
 };
 
 startWebSocket();
-  
-// Get the similarity rating for the current tab
-function getSimilarityRating(tab) {
-  const message = {
-    url: tab.url,
-    title: tab.title,
-    user_info: user_info,
-    addonEnabled: addonEnabled
-  };
-
-  ws.send(JSON.stringify(message));
-}
-
 
 // Listen for tab events (created, updated, switched)
 browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   // Check if the tab title has changed, the tab is active, and the URL is different from the last sent URL
-  if (changeInfo.status === 'complete' && changeInfo.title && tab.active && tab.url !== lastSentUrl) {
-    lastSentUrl = tab.url;
-    getSimilarityRating(tab);
+  if (changeInfo.status === 'complete' && changeInfo.title && tab.active) {
+    getSimilarityRating({ tab: tab, save: true });
   }
 });
 
 browser.tabs.onActivated.addListener((activeInfo) => {
   browser.tabs.get(activeInfo.tabId).then((tab) => {
-    if (tab && tab.url !== lastSentUrl && tab.status === 'complete') {
-      lastSentUrl = tab.url;
-      getSimilarityRating(tab);
+    if (tab && tab.status === 'complete') {
+      getSimilarityRating({ tab: tab, save: true });
     }
   });
 });
 
 browser.tabs.onCreated.addListener((tab) => {
-  // Check if the URL is different from the last sent URL and ensure the tab is fully loaded
-  if (tab.url !== lastSentUrl && tab.status === 'complete' && tab.url !== 'about:blank') {
-    lastSentUrl = tab.url;
-    getSimilarityRating(tab);
+  if (tab.status === 'complete' && tab.url !== 'about:blank') {
+    getSimilarityRating({ tab: tab, save: true });
   }
 });
 
 browser.webNavigation.onCompleted.addListener((details) => {
   browser.tabs.query({ active: true, currentWindow: true }).then(tabs => {
-    if (tabs[0]) {
-      // Check if the URL is different from the last sent URL
-      if (tabs[0].url !== lastSentUrl) {
-        // console.log("onCompleted event received");
-        lastSentUrl = tabs[0].url;
-        getSimilarityRating(tabs[0]);
-      }
-    }
+    getSimilarityRating({ tab: tabs[0], save: true });
   });
 });
 
 
 // Listen for messages from the other scripts
 browser.runtime.onMessage.addListener((request) => {
-  // Send the self-report data to the WebSocket server
-  if (request.type === 'selfReport') {
-    console.log('Sending self-report data');
-    const selfReport = {
-      message: 'selfReport',
-      context: 'selfReport',
-      isProductiveTime: request.isProductiveTime,
-      stressLevel: request.stressLevel,
-      distractionLevel: request.distractionLevel
-    }
-    ws.send(JSON.stringify(selfReport));
-    
-  }
-
-  // Augment the intervention data with self-report data and send to the WebSocket server
-  if (request.type === 'selfReportIntervention') {
-    sendSelfReportData(request);
-  }
-
-  // Send the lastRating to the popup script
-  if (request.type === 'getRating') {
-    browser.runtime.sendMessage({ type: 'updateRating', rating: lastRating });
-  }
-
-  // force the websocket to reconnect
-  if (request.type === 'checkServerStatus') {
-    ws.close();
-    ws = null;
-  }
-
-  // test the LLM connection
-  if (request.type === 'testLlm') {
-    console.log('Testing LLM');
-    ws.send(JSON.stringify({ message: 'testLlm'}));
-  }
-
-  // Send the updated user info to the WebSocket server
   if (request.type === 'updateUserInfo') {
-    ws.send(JSON.stringify({ message: 'updateUserInfo', user_info: request.user_info }));
-  }
-
-  // Send the updated study info to the WebSocket server
-  if (request.type === 'updateStudyInfo') {
-    //check if the browser.theme API is available
-    if (browser.theme) {
-      themeIntervention = true;
-    }
-    else {
-      themeIntervention = false;
-    }
-    ws.send(JSON.stringify({ message: 'updateStudyInfo', study_info: request.study_info, themeIntervention: themeIntervention }));
-  }
-
-  // Send a request to the Python script to get keyword suggestions
-  if (request.type === 'suggestKeywords') {
-    ws.send(JSON.stringify({ message: 'suggestKeywords', task: request.task }));
-  }
-
-  // Send a request to the Python script to get relevant content suggestions
-  if (request.type === 'suggestRelevantContent') {
-    browser.storage.local.get('relatedContent').then(relatedContent => {
-    ws.send(JSON.stringify({ message: 'suggestRelevantContent', relatedContent: relatedContent}));
-  });
-  }
-
-  // Request a LLM response to a message
-  if (request.type === 'sendLLMMessage') {
-    ws.send(JSON.stringify({ message: 'sendLLMMessage', conversation: request.conversation}));
+    embedUserInfo();
   }
 
   // Button for generic development purposes
   if (request.type === 'demoButton') {
-    browser.storage.local.set({ chatbotInterventionTriggered: true }).then(() => {
-      openInterventionPopup();
-    });
+    // Placeholder
   }
 
-  // Send a request to the Python script to identify distracting tabs  
+  // identify distracting tabs  
   if (request.type === 'identifyDistractingTabs') {
-    identifyDistractingTabs(true); //false to use extension popup
-  }
-
-  if (request.type === 'getDashboardData') {
-    ws.send(JSON.stringify({ message: 'getDashboardData'}));
+    identifyDistractingTabs(); //false to use extension popup
   }
 });
-
-function sendSelfReportData(request) {
-  // Send the self-report data to the server if it exists and remove the temporary storage
-  browser.storage.local.get(["listTrackingDataTemp", "chatbotTrackingDataTemp"]).then(result => {
-    if (result.listTrackingDataTemp) {
-      const listTrackingData = result.listTrackingDataTemp;
-      listTrackingData.interventionRating = request.interventionRating || -1;
-      listTrackingData.isProductiveTime = request.isProductiveTime || -1;
-      console.log('Sending listTrackingData:', listTrackingData);
-      ws.send(JSON.stringify({ message: 'listTrackingData', listTrackingData: listTrackingData}));
-      browser.storage.local.remove('listTrackingDataTemp');
-    }
-    else if (result.chatbotTrackingDataTemp) {
-      const chatbotTrackingData = result.chatbotTrackingDataTemp;
-      chatbotTrackingData.interventionRating = request.interventionRating || -1;
-      chatbotTrackingData.isProductiveTime = request.isProductiveTime || -1;
-      console.log('Sending chatbotTrackingData:', chatbotTrackingData);
-      ws.send(JSON.stringify({ message: 'chatbotTrackingData', chatbotTrackingData: chatbotTrackingData}));
-      browser.storage.local.remove('chatbotTrackingDataTemp');
-    }
-  });
-}
 
 
 // Check which of the open tabs are among those identified as distracting and highlight them
 async function handleDistractingTabs(distractingIndices) {
-  browser.tabs.query({ currentWindow: true }).then(tabs => {
-    // Filter the tabs to get the ones with the provided indices
-    const distractingTabs = tabs.filter((tab, index) => distractingIndices.indexOf(index) != -1);
-    // Highlight the distracting tabs
-    if (distractingTabs.length > 0) {
-      const distractingTabIds = distractingTabs.map(tab => tab.id);
-      const distractingTabIndices = distractingTabs.map(tab => tab.index);
-      browser.tabs.highlight({ tabs: distractingTabIndices, windowId: tabs[0].windowId});
-      browser.storage.local.set({ distractingTabs : distractingTabs });
-      browser.runtime.sendMessage({ type: 'distractingTabs', distractingTabs: distractingTabs});
-    }
-  });
+  const tabs = await browser.tabs.query({ currentWindow: true });
+  // Filter the tabs to get the ones with the provided indices
+  const distractingTabs = tabs.filter((tab, index) => 
+    distractingIndices.some(distracting => distracting.index === tab.id)
+  );
+  
+  // Highlight the distracting tabs
+  if (distractingTabs.length > 0) {
+    const distractingTabIds = distractingTabs.map(tab => tab.id);
+    const distractingTabIndices = distractingTabs.map(tab => tab.index);
+    await browser.tabs.highlight({ tabs: distractingTabIndices, windowId: tabs[0].windowId });
+    await browser.storage.local.set({ distractingTabs: distractingTabs });
+  }
 }
 
 
-// Update the icon color and (if applicable) the theme based on the rating
+
+// Update the theme based on the rating, if the nudging intervention is available
 async function updateIconColor(rating, availableInterventions) {
-  if (rating === null) {
-    rating = 0.5;
-  }
-  try {
-    // generate a canvas element
-    // Load the PNG image with transparency
-    const img = new Image();
-    img.src = 'assets/procrastiscan-icon-inv-128px.png';
-    await new Promise(resolve => { img.onload = resolve; });
+  if (browser.theme) {
+      // Update the theme color if the nudging intervention is available
+    if (availableInterventions.nudging == true) {
+      if (rating === null) {
+        rating = 0.7;
+      }
 
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = 128;
-    canvas.height = 128;
+      // // Load the PNG image with transparency
+      // const img = new Image();
+      // img.src = 'assets/procrastiscan-icon-128px.png';
+      // await new Promise(resolve => { img.onload = resolve; });
+      
+      //   // generate a canvas element
+      // const canvas = document.createElement('canvas');
+      // const ctx = canvas.getContext('2d');
+      // canvas.width = 128;
+      // canvas.height = 128;
 
-    // Calculate RGB values based on the rating, gray if addon is disabled
-    let red, green, blue;
-    if (addonEnabled) {
       // Adjust brightness based on rating and clip to (0,1)
-      brightness = Math.max(0, Math.min(1, 0.7 - rating));
+      const brightness = Math.max(0, Math.min(1, 0.7 - rating));
       
       // Calculate colors
-      red = Math.floor(100 + (155 * brightness));
-      green = Math.floor(100 - (100 * brightness));
-      blue = Math.floor(100 - (100 * brightness));
-    } else {
-      // Default dark grey
-      red = 100;
-      green = 100;
-      blue = 100;
-    }
-    
-    color = `rgb(${red}, ${green}, ${blue})`;
-    ctx.fillStyle = `rgb(${red}, ${green}, ${blue})`;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const red = Math.floor(100 + (155 * brightness));
+      const green = Math.floor(100 - (100 * brightness));
+      const blue = Math.floor(100 - (100 * brightness));
 
-    // Draw the icon onto the canvas
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const color = `rgb(${red}, ${green}, ${blue})`;
+      // ctx.fillStyle = `rgb(${red}, ${green}, ${blue})`;
+      // ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    browser.browserAction.setIcon({ imageData: imageData });
+      // // Draw the icon onto the canvas
+      // ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-    // Update the theme color if the nudging intervention is available
-    if (availableInterventions.indexOf("nudging") != -1) {
+      // const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      // browser.action.setIcon({ imageData: imageData });
+
+
       browser.theme.update({
         colors: {
           frame: color,
@@ -372,61 +342,62 @@ async function updateIconColor(rating, availableInterventions) {
       else {
         browser.theme.reset();
       }
-    }
-    catch (e) {
-    }
+  }
 }
 
-
-browser.storage.onChanged.addListener((changes) => {
-  browser.storage.local.get(['meanRating', 'lastRating', 'availableInterventions']).then((result) => {
-    const availableInterventions = result.availableInterventions || [];
+// check if the intervention timing has been reached
+async function checkInterventions() {
+  browser.storage.local.get(['meanRating', 'lastRating', 'settings', 'lastInterventionTime']).then((result) => {
+    const availableInterventions = result.settings.availableInterventions || [];
+    const lastInterventionTime = result.lastInterventionTime || null;
     updateIconColor(result.meanRating, availableInterventions);
-  
-    if (changes.addonEnabled) {
-      addonEnabled = changes.addonEnabled.newValue;
-    }
-    if (changes.lastInterventionTime) {
-      lastInterventionTime = changes.lastInterventionTime.newValue;
-    }
 
     // Trigger intervention popups if the mean rating is below a certain threshold and the last alert was more than 20 minutes ago
-    if (changes.lastRating && changes.lastRating.newValue !== null) {
-      if (availableInterventions.indexOf("procrastinationList") != -1 || availableInterventions.indexOf("chatbot") != -1) {
-      const nMinutes = 20 * 60 * 1000; // 20 minutes in milliseconds
-      const newRating = changes.meanRating.newValue;
+      if (availableInterventions.chatbot == true || availableInterventions.procrastinationList == true) {
+      const nMinutes =  20 * 60 * 1000; // 20 minutes in milliseconds
       const now = Date.now();
 
-      if (newRating < 0.5 && (lastInterventionTime === null || now - lastInterventionTime >= nMinutes)) {    
+      if (result.meanRating < 0.5 && (lastInterventionTime === null || now - lastInterventionTime >= nMinutes)) {    
         browser.storage.local.set({ lastInterventionTime: now });
-        if (availableInterventions.indexOf("procrastinationList") != -1) {
+        if (availableInterventions.procrastinationList == true) {
           browser.storage.local.set({ listInterventionTriggered: true }).then(() => {
             identifyDistractingTabs(true);
           });
         }
-        else if (availableInterventions.indexOf("chatbot") != -1) {
+        else if (availableInterventions.chatbot == true) {
           browser.storage.local.set({ chatbotInterventionTriggered: true }).then(() => {
             openInterventionPopup();
           });
         }
       }
-    }
-    }
-  });
-});
+      }
+    });
+  };
 
 
 // gather titles of all tabs
-function identifyDistractingTabs(openInterventionWindow) {
+function identifyDistractingTabs() {
   browser.tabs.query({}).then(tabs => {
-    const titles = tabs.map(tab => tab.title);
-    const urls = tabs.map(tab => tab.url);
-    const indices = tabs.map((tab, index) => index);
-    ws.send(JSON.stringify({ message: 'identifyDistractingTabs', titles: titles, urls: urls, indices: indices, openInterventionWindow: openInterventionWindow }));
+    const distractingIndices = [];
+
+    const promises = tabs.map(tab => {
+      return getSimilarityRating({ tab: tab, save: false }).then(score => {
+        if (score < 0.5) {
+          distractingIndices.push({ index: tab.id });
+        }
+      });
+    });
+
+    Promise.all(promises).then(() => {
+      handleDistractingTabs(distractingIndices).then(() => {
+        openInterventionPopup();
+      });
+    });
   });
 }
 
 
+// Open the chat as a popup
 function openInterventionPopup() {
   // Check if the popup window is already open
   if (interventionWindowId !== null) {
@@ -443,6 +414,7 @@ function openInterventionPopup() {
     }).then((window) => {
       interventionWindowId = window.id;
     }).then(() => {
+    // Close the popup window if the user switches to another window
     browser.windows.onFocusChanged.addListener((newWindowId) => {
       if (interventionWindowId !== null) {
         if (newWindowId === interventionWindowId) {
@@ -450,8 +422,6 @@ function openInterventionPopup() {
         } else {
           browser.windows.remove(interventionWindowId);
           interventionWindowId = null;
-          popupWindowId = null;
-          openSelfReportPopup(true);
           browser.windows.onFocusChanged.removeListener();
         }
       }
@@ -460,101 +430,13 @@ function openInterventionPopup() {
   }
 }
 
-
-function openSelfReportPopup(intervention) {
-  let popupUrl = "self-report.html";
-  if (intervention) {
-    popupUrl = "self-report-intervention.html";
-  }
-  if (popupWindowId !== null) {
-    browser.windows.update(popupWindowId, { focused: true });
-  }
-   else {
-    browser.windows.create({
-      type: "popup",
-      url: popupUrl,
-      width: 400,
-      height: 600,
-      focused: true
-    }).then((window) => {
-      popupWindowId = window.id;
-    });
-    browser.windows.onFocusChanged.addListener((newWindowId) => {
-      if (popupWindowId !== null && newWindowId !== -1) {
-        if (newWindowId === popupWindowId) {
-          browser.windows.update(popupWindowId, { focused: true });
-        } else {
-          browser.windows.remove(popupWindowId);
-          popupWindowId = null;
-          sendSelfReportData({ interventionRating: -1, isProductiveTime: -1 });
-          browser.windows.onFocusChanged.removeListener();
-        }
-      }
-    });
-  }
-}
-
-// Open the welcome dialogue window after installation
+// Open the options page after installation
 browser.runtime.onInstalled.addListener(() => {
-  browser.storage.local.get( "addonInitialized" ).then(result => {
-    if (!result.addonInitialized) {
-      browser.runtime.openOptionsPage()
-    }
-  })
+      browser.runtime.openOptionsPage();
 });
 
-//show the debriefing page
-function openStudyFinishedTab() {
-  browser.tabs.create({
-    url: browser.runtime.getURL("study-finished.html"),
-  });
-}
+//keep the service worker alive
+setInterval(() => {
+  browser.runtime.getPlatformInfo();
+}, 1000 * 20);
 
-// Check if the self-report popup should be opened
-function checkSelfReportInterval() {
-  browser.storage.local.get('studyFinished').then(result => {
-    if (!result.studyFinished) {
-      ws.send(JSON.stringify({ message: 'checkSelfReportTiming' }));
-      }
-  });
-}
-
-function checkInterventionSchedule() {
-  browser.storage.local.get(['interventionSchedule', 'availableInterventions', 'studyFinished']).then(result => {
-    console.log('Checking intervention schedule');
-
-    if (result.interventionSchedule && !result.studyFinished) {
-      const currentTime = Date.now();
-      const interventionSchedule = result.interventionSchedule;
-      const availableInterventions = result.availableInterventions;
-
-      if (availableInterventions[0] === "studyFinished") {
-
-        openStudyFinishedTab();
-        browser.storage.local.set({ studyFinished: true });
-      }
-      // Check if the next intervention is scheduled to start
-      const currentInterventionIndex = interventionSchedule.findIndex(item => item.interventionType === availableInterventions[0]);
-      const nextIntervention = interventionSchedule[currentInterventionIndex + 1];
-      if (nextIntervention) {
-
-        const nextInterventionStartTime = new Date(nextIntervention.startTime).getTime();
-
-        console.log('Current intervention:', availableInterventions[0]);
-        console.log('nextIntervention:', nextIntervention.interventionType);
-        if (nextInterventionStartTime <= currentTime) {
-          
-          const updatedInterventions = [nextIntervention.interventionType];
-          browser.storage.local.set({ availableInterventions: updatedInterventions });
-
-          // Send a message to the server
-          ws.send(JSON.stringify({ message: 'nextInterventionStage', nextIntervention: nextIntervention.interventionType, currentIntervention: availableInterventions[0] }));
-        }
-      }
-    }
-  });
-}
-
-//automated checks 
-setInterval(checkSelfReportInterval, 60 * 1000);
-setInterval(checkInterventionSchedule, 60 * 1000);

@@ -1,23 +1,4 @@
-// popup.js - popup to display user info settings, display similarity rating and provide user interaction
-
-let keywordSuggestionsReceived = false;
-
-// Listen for messages from background.js
-browser.runtime.onMessage.addListener(request => {
-
-  // update the popup UI with the user info
-  if (request.type === 'updateUserInfo') {
-    const { task, relatedContent, commonDistractions } = request.user_info;
-    browser.storage.local.set({
-      task: task,
-      relatedContent: relatedContent,
-      commonDistractions: commonDistractions,
-    });
-  }
-  if (request.type === 'distractingTabs') {
-    //window.location.href = 'chat.html';
-  }
-});
+// popup.js - popup to display and edit user info settings, the similarity ratings and access other pages
 
 // Get the title of the current tab
 async function getCurrentTabTitle() {
@@ -32,9 +13,9 @@ async function getCurrentTabUrl() {
 
 // Update the elements in the popup UI
 function updatePopupUI() {
-  if (keywordSuggestionsReceived) {
-    return; // Exit early, don't update UI so that the keyword suggestions are not overwritten
-  }
+  // if (keywordSuggestionsReceived) {
+  //   return; // Exit early, don't update UI so that the keyword suggestions are not overwritten; Currently unused
+  // }
   browser.storage.local.get(['task', 'relatedContent', 'commonDistractions', 'lastRating', 'meanRating', 'currentUrl', 'addonEnabled']).then(result => {
     getCurrentTabUrl().then(currentTabUrl => {
       const task = result.task || '';
@@ -92,9 +73,9 @@ function updatePopupUI() {
 
 document.addEventListener('DOMContentLoaded', () => {
   // Update UI when popup is opened unless keyword suggestions have been received
-  if (!keywordSuggestionsReceived) {
+  // if (!keywordSuggestionsReceived) {
     updatePopupUI();
-  }
+  // }
 
   // Save settings button event listener
   document.getElementById('saveSettingsBtn').addEventListener('click', () => {
@@ -104,46 +85,34 @@ document.addEventListener('DOMContentLoaded', () => {
       relatedContent: document.getElementById('relatedContent').value.trim().replace(/[^\w\s]+$/, ''),
       commonDistractions: document.getElementById('commonDistractions').value.trim().replace(/[^\w\s]+$/, '')
     };
-    browser.runtime.sendMessage({ type: 'updateUserInfo', user_info });
+
     browser.storage.local.set(user_info);
+    browser.runtime.sendMessage({ type: 'updateUserInfo' });
     console.log('Settings saved!');
   });
 
   // Suggest keywords button event listener. Currently unused.
-  document.getElementById('suggestKeywordsBtn').addEventListener('click', () => {
-    const task = document.getElementById('task').value;
-    browser.runtime.sendMessage({ type: 'suggestKeywords', task: document.getElementById('task').value});
-  });
+  // document.getElementById('suggestKeywordsBtn').addEventListener('click', () => {
+  //   const task = document.getElementById('task').value;
+  //   browser.runtime.sendMessage({ type: 'suggestKeywords', task: document.getElementById('task').value});
+  // });
 
   // Listen for changes to keywordSuggestions in storage. Currently unused.
-  browser.storage.onChanged.addListener(changes => {
-    if (changes.keywordSuggestions) {
-      keywordSuggestionsReceived = true;
-        const keywordSuggestions = changes.keywordSuggestions.newValue;
-        console.log('Received keyword suggestions:', keywordSuggestions);
-        if (keywordSuggestions && keywordSuggestions.length > 0) {
-          const relatedContentElement = document.getElementById('relatedContent');
-          relatedContentElement.style.color = 'blue';
-          relatedContentElement.value = keywordSuggestions;
-        }
-      }
-    else {
-      updatePopupUI();
-    }
-    });
-
-  // Retrieve addonEnabled value from storage and set checkbox state
-  browser.storage.local.get('addonEnabled').then(result => {
-    const addonEnabledCheckbox = document.getElementById('addonEnabled');
-    addonEnabledCheckbox.checked = result.addonEnabled !== undefined ? result.addonEnabled : true;
-  }).catch(error => {
-    console.error('Error retrieving addonEnabled from storage:', error);
-  });
-
-  //save the addon switch state
-  document.getElementById('addonEnabled').addEventListener('change', (event) => {
-    browser.storage.local.set({ addonEnabled: event.target.checked });
-  });
+  // browser.storage.onChanged.addListener(changes => {
+  //   if (changes.keywordSuggestions) {
+  //     keywordSuggestionsReceived = true;
+  //       const keywordSuggestions = changes.keywordSuggestions.newValue;
+  //       console.log('Received keyword suggestions:', keywordSuggestions);
+  //       if (keywordSuggestions && keywordSuggestions.length > 0) {
+  //         const relatedContentElement = document.getElementById('relatedContent');
+  //         relatedContentElement.style.color = 'blue';
+  //         relatedContentElement.value = keywordSuggestions;
+  //       }
+  //     }
+  //   else {
+  //     updatePopupUI();
+  //   }
+  //   });
   
   // manually trigger the distracting tabs identification
   document.getElementById('identifyDistractingTabsBtn').addEventListener('click', e => {
