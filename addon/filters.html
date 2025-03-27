@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Filters - ProcrastiScan</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootswatch/4.3.1/darkly/bootstrap.min.css">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            min-width: 800px;
+            min-height: 400px;
+        }
+
+        .list-container {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="navigation-panel">
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <a class="navbar-brand">
+                <img src="assets/procrastiscan-icon-inv-128px.png" width="30" height="30">
+            </a>
+            <ul class="navbar-nav flex-row mr-auto">
+                <li class="nav-item" style="margin-right: 10px">
+                    <a class="nav-link" href="popup.html" id="routeToHomeBtn">Overview</a>
+                </li>
+                <li class="nav-item" style="margin-right: 10px">
+                    <a class="nav-link" href="list.html" id="routeToListBtn">Procrastination List</a>
+                </li>
+                <li class="nav-item" style="margin-right: 10px">
+                    <a class="nav-link" href="chat.html" id="routeToChatBtn">Chat</a>
+                </li>
+                <li class="nav-item" style="margin-right: 10px">
+                    <a class="nav-link" href="filters.html" id="routeToFiltersBtn">Filters</a>
+                </li>
+                <li class="nav-item" style="margin-right: 10px">
+                    <a class="nav-link" href="dashboard.html" id="routeToDashboardBtn">Statistics</a>
+                </li>
+                <li class="nav-item" style="margin-right: 10px">
+                    <a class="nav-link" href="settings.html" id="routeToSettingsBtn">Settings</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+    <div id="lists-container">
+        <nav class="navbar navbar-expand-lg navbar-light bg-primary">
+            <ul class="navbar-nav flex-row mr-auto" id="listTabs" style="white-space: nowrap; overflow-x: hidden;">
+                <li class="nav-item"><a class="nav-link active" style="margin-right: 10px" data-toggle="tab"
+                        href="#blocked">Blocklist</a></li>
+                <li class="nav-item"><a class="nav-link" style="margin-right: 10px" data-toggle="tab"
+                        href="#allowed">Allowlist</a></li>
+                <li class="nav-item"><a class="nav-link" style="margin-right: 10px" data-toggle="tab"
+                        href="#penalized">Penalized Titles</a></li>
+                <li class="nav-item"><a class="nav-link" style="margin-right: 10px" data-toggle="tab"
+                        href="#preserved">Preserved Titles</a></li>
+            </ul>
+        </nav>
+        <div class="tab-content">
+            <div id="blocked" class="tab-pane fade show active">
+                <h5>These URLs/domains will <strong>always</strong> be blocked <strong>when you are distracted.</strong>
+                </h5>
+                <div class="list-container" contenteditable="true" id="blockedList"></div>
+            </div>
+            <div id="allowed" class="tab-pane fade">
+                <h5>These URLs/domains will <strong>never</strong> be blocked.</h5>
+                <div class="list-container" contenteditable="true" id="allowedList"></div>
+            </div>
+            <div id="penalized" class="tab-pane fade">
+                <h5>Tabs with these titles are treated like <strong>common distractions.</strong></h5>
+                <div class="list-container" contenteditable="true" id="penalizedList"></div>
+            </div>
+            <div id="preserved" class="tab-pane fade">
+                <h5>Tabs with these titles are treated like <strong>related content.</strong></h5>
+                <div class="list-container" contenteditable="true" id="preservedList"></div>
+            </div>
+            <button class="btn btn-primary mt-2" id="saveBtn">Save</button>
+        </div>
+    </div>
+    <script src="lib/browser-polyfill.js"></script>
+    <script src="filters.js"></script>
+</body>
+
+</html>

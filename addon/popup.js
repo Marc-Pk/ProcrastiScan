@@ -38,43 +38,43 @@ function updatePopupUI() {
       taskElement.value = task;
       relatedContentElement.value = relatedContent;
       commonDistractionsElement.value = commonDistractions;
-    
 
-    // Toggle indicator color based on current tab URL
-    if (addonEnabled) {
-      if (currentTabUrl === result.currentUrl) {
-        ratingOutdatedElement.style.display = 'none';
-        ratingRecentElement.style.display = 'inline';
-        getCurrentTabTitle().then(title => {
-          currentTabTitleElement.textContent = title;
-        });
+
+      // Toggle indicator color based on current tab URL
+      if (addonEnabled) {
+        if (currentTabUrl === result.currentUrl) {
+          ratingOutdatedElement.style.display = 'none';
+          ratingRecentElement.style.display = 'inline';
+          getCurrentTabTitle().then(title => {
+            currentTabTitleElement.textContent = title;
+          });
+        } else {
+          ratingOutdatedElement.style.display = 'inline';
+          ratingRecentElement.style.display = 'none';
+          currentTabTitleElement.textContent = 'Loading...';
+        }
+
+        lastRatingElement.textContent = lastRating;
+        meanRatingElement.textContent = meanRating;
+        similarityRatingHeader.classList.remove('disabled');
       } else {
-        ratingOutdatedElement.style.display = 'inline';
+        // Addon is disabled
+        ratingOutdatedElement.style.display = 'none';
         ratingRecentElement.style.display = 'none';
-        currentTabTitleElement.textContent = 'Loading...';
+        currentTabTitleElement.textContent = 'Addon is currently disabled';
+        lastRatingElement.textContent = '';
+        meanRatingElement.textContent = '';
+        relatedContentElement.style.color = 'gray';
+        similarityRatingHeader.classList.add('disabled');
       }
-
-      lastRatingElement.textContent = lastRating;
-      meanRatingElement.textContent = meanRating;
-      similarityRatingHeader.classList.remove('disabled');
-    } else {
-      // Addon is disabled
-      ratingOutdatedElement.style.display = 'none';
-      ratingRecentElement.style.display = 'none';
-      currentTabTitleElement.textContent = 'Addon is currently disabled';
-      lastRatingElement.textContent = '';
-      meanRatingElement.textContent = '';
-      relatedContentElement.style.color = 'gray';
-      similarityRatingHeader.classList.add('disabled');
-    }
+    });
   });
-});
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   // Update UI when popup is opened unless keyword suggestions have been received
   // if (!keywordSuggestionsReceived) {
-    updatePopupUI();
+  updatePopupUI();
   // }
 
   // Save settings button event listener

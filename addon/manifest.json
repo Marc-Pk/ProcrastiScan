@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ProcrastiScan",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "A new approach to detecting procrastination",
   "icons": {
     "128": "assets/procrastiscan-icon-128px.png"
@@ -27,5 +27,10 @@
   "options_ui": {
     "page": "settings.html",
     "open_in_tab": true
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "{2507637b-7733-4247-9992-da494b1aff66}"
+    }
   }
 }

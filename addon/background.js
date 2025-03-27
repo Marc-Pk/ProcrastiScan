@@ -38,18 +38,33 @@ async function embedText(texts) {
 }
 
 // Embed the user info
-async function embedUserInfo() {  
+async function embedUserInfo() {
   let task, relatedContent, commonDistractions;
-  await browser.storage.local.get(['task', 'relatedContent', 'commonDistractions']).then(result => {
+  await browser.storage.local.get(['task', 'relatedContent', 'commonDistractions', 'tabTitlesPenalized', 'tabTitlesPreserve']).then(result => {
     task = [result.task]
     relatedContent = result.relatedContent.split(', ');
     commonDistractions = result.commonDistractions.split(', ');
+    // for each item, add it to the respective array if it is not already present
+    if (result.tabTitlesPenalized) {
+      for (const title of result.tabTitlesPenalized) {
+        if (!commonDistractions.some(item => item.toLowerCase() === title.toLowerCase())) {
+          commonDistractions.push(title);
+        }
+      }
+    }
+    if (result.tabTitlesPreserve) {
+      for (const title of result.tabTitlesPreserve) {
+        if (!relatedContent.some(item => item.toLowerCase() === title.toLowerCase())) {
+          relatedContent.push(title);
+        }
+      }
+    }
   });
-  
+
   const embeddingsTask = await embedText(task);
   const embeddingsDistractions = await embedText(commonDistractions);
   const embeddingsRelatedContent = await embedText(relatedContent)
-  
+
   // Convert the embeddings to a serializable format
   function convertEmbeddingsToArray(embeddings) {
     return Array.from(embeddings, emb => Array.from(emb));
@@ -65,7 +80,7 @@ async function embedUserInfo() {
 }
 
 // Calculate and save the TRS
-async function getSimilarityRating({tab, program, save}) {
+async function getSimilarityRating({ tab, program, save }) {
   let pageInfo, historyName, embeddingsTask, embeddingsRelatedContent, embeddingsDistractions, similarityRatings;
   if (tab) {
     const url = new URL(tab.url);
@@ -92,7 +107,7 @@ async function getSimilarityRating({tab, program, save}) {
       embeddingsDistractions = result.embeddingsDistractions;
       similarityRatings = result.similarityRatings || [];
     });
-    
+
     const currentSimilarityRating = await calculateSimilarity(pageInfo, embeddingsTask, embeddingsRelatedContent, embeddingsDistractions);
     const similarityRatingAvg = await calculateAverageSimilarity(currentSimilarityRating, similarityRatings);
     const newData = { time: Date.now(), trs: currentSimilarityRating, trsAvg: similarityRatingAvg, title: historyName };
@@ -108,7 +123,7 @@ async function getSimilarityRating({tab, program, save}) {
       embeddingsRelatedContent = result.embeddingsRelatedContent;
       embeddingsDistractions = result.embeddingsDistractions;
     });
-  
+
     const currentSimilarityRating = await calculateSimilarity(pageInfo, embeddingsTask, embeddingsRelatedContent, embeddingsDistractions);
     return currentSimilarityRating;
   }
@@ -130,7 +145,7 @@ async function calculateSimilarity(pageInfo, embeddingsTask, embeddingsRelatedCo
   };
   for (const embedding of embeddingsDistractions) {
     similaritiesDistractions.push(cos_sim(embedding, embeddingTitleDomain));
-  };  
+  };
   for (const embedding of embeddingsRelatedContent) {
     similaritiesRelatedContent.push(cos_sim(embedding, embeddingTitleDomain));
   };
@@ -139,7 +154,7 @@ async function calculateSimilarity(pageInfo, embeddingsTask, embeddingsRelatedCo
   const similarityWebsiteTask = Math.max(...similarityTask);
   const similarityWebsiteDistractions = Math.max(...similaritiesDistractions);
   const similarityWebsiteRelatedContent = Math.max(...similaritiesRelatedContent);
-  
+
   const similarityRating = ((similarityWebsiteTask + similarityWebsiteRelatedContent - similarityWebsiteDistractions + 1) / 2);
 
   // round to 3 decimal places
@@ -167,11 +182,11 @@ async function calculateAverageSimilarity(currentSimilarityRating, similarityRat
 
   // Calculate time differences to the previous data point
   const timeDiffs = windowRatings.map((rating, index) => index > 0 ? rating.time - windowRatings[index - 1].time : 0);
-  
-  
+
+
   const weightedRatings = windowRatings.map((rating, index) => {
     const weight = Math.abs(timeDiffs[index] / totalTimeDiff);
-    return { rating: rating.trs, weight};
+    return { rating: rating.trs, weight };
   });
 
   // Calculate weighted average
@@ -181,18 +196,18 @@ async function calculateAverageSimilarity(currentSimilarityRating, similarityRat
   const weightedAverage = weightedSum / totalWeight;
 
   return Math.round(weightedAverage * 1000) / 1000;
-}  
+}
 
 
 // Function to handle the WebSocket connection
 function startWebSocket() {
   ws = new WebSocket('ws://localhost:8765');
-  ws.onopen = function() {
+  ws.onopen = function () {
     console.log('Websocket started');
     ws.send(JSON.stringify({ message: 'requestingConnection' }));
   };
   // Listen for messages from the WebSocket server
-  ws.onmessage = function(event) {
+  ws.onmessage = function (event) {
     const response = JSON.parse(event.data);
 
     // Update the WebSocket connection status
@@ -207,17 +222,17 @@ function startWebSocket() {
     }
   };
 
-  ws.onclose = function(){
+  ws.onclose = function () {
     browser.storage.local.set({ websocketConnected: false });
     // connection closed, discard old websocket and create a new one in 5s
     console.log('Websocket closed, reconnecting in 5s');
-    setTimeout(function() {
+    setTimeout(function () {
       startWebSocket();
     }, 5000);
   };
 
   // close the websocket if an error occurs to trigger the onclose event
-  ws.onerror = function() {
+  ws.onerror = function () {
     console.log('Websocket error, closing connection');
     ws.close();
     ws = null;
@@ -270,6 +285,29 @@ browser.runtime.onMessage.addListener((request) => {
   if (request.type === 'identifyDistractingTabs') {
     identifyDistractingTabs(); //false to use extension popup
   }
+
+  // restore the blocked tab
+  if (request.type === 'restoreBlockedTab') {
+    browser.storage.local.get(['blockedTabTemp']).then((result) => {
+      browser.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
+        const currentTab = tabs[0];
+        browser.storage.local.remove('blockedTabTemp');
+        //go back to the previous tab, not the blocked page in case multiple tabs are blocked and the wrong one could be restored
+        browser.tabs.goBack(currentTab.id);
+      });
+    });
+  }
+
+  // close the blocked tab
+  if (request.type === 'closeBlockedTab') {
+    browser.storage.local.get(['blockedTabTemp']).then((result) => {
+      browser.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
+        const currentTab = tabs[0];
+        browser.storage.local.remove('blockedTabTemp');
+        browser.tabs.remove(currentTab.id);
+      });
+    });
+  }
 });
 
 
@@ -277,10 +315,10 @@ browser.runtime.onMessage.addListener((request) => {
 async function handleDistractingTabs(distractingIndices) {
   const tabs = await browser.tabs.query({ currentWindow: true });
   // Filter the tabs to get the ones with the provided indices
-  const distractingTabs = tabs.filter((tab, index) => 
+  const distractingTabs = tabs.filter((tab, index) =>
     distractingIndices.some(distracting => distracting.index === tab.id)
   );
-  
+
   // Highlight the distracting tabs
   if (distractingTabs.length > 0) {
     const distractingTabIds = distractingTabs.map(tab => tab.id);
@@ -293,56 +331,46 @@ async function handleDistractingTabs(distractingIndices) {
 
 
 // Update the theme based on the rating, if the nudging intervention is available
-async function updateIconColor(rating, availableInterventions) {
+async function updateIconColor(rating, availableInterventions, isWithinInterventionTime) {
   if (browser.theme) {
-      // Update the theme color if the nudging intervention is available
-    if (availableInterventions.nudging == true) {
+    // Update the theme color if the nudging intervention is available
+    if (availableInterventions.nudging == true && isWithinInterventionTime) {
       if (rating === null) {
         rating = 0.7;
       }
-
-      // // Load the PNG image with transparency
-      // const img = new Image();
-      // img.src = 'assets/procrastiscan-icon-128px.png';
-      // await new Promise(resolve => { img.onload = resolve; });
-      
-      //   // generate a canvas element
-      // const canvas = document.createElement('canvas');
-      // const ctx = canvas.getContext('2d');
-      // canvas.width = 128;
-      // canvas.height = 128;
-
-      // Adjust brightness based on rating and clip to (0,1)
       const brightness = Math.max(0, Math.min(1, 0.7 - rating));
-      
+
       // Calculate colors
       const red = Math.floor(100 + (155 * brightness));
       const green = Math.floor(100 - (100 * brightness));
       const blue = Math.floor(100 - (100 * brightness));
 
       const color = `rgb(${red}, ${green}, ${blue})`;
-      // ctx.fillStyle = `rgb(${red}, ${green}, ${blue})`;
-      // ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // // Draw the icon onto the canvas
-      // ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-      // const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      // browser.action.setIcon({ imageData: imageData });
-
 
       browser.theme.update({
         colors: {
           frame: color,
           tab_text: "#ffffff",
           tab_background_text: "#ffffff",
-          }
-        });
-      }
-      else {
-        browser.theme.reset();
-      }
+        }
+      });
+    }
+    else {
+      browser.theme.reset();
+    }
   }
+}
+
+function checkInterventionTime(interventionTimes) {
+  const now = new Date();
+  const day = now.toLocaleString('en-US', { weekday: 'long' });
+  const currentTime = now.getHours() * 100 + now.getMinutes();
+
+  if (!interventionTimes[day]) return false;
+  return interventionTimes[day].split(",").some(range => {
+    const [start, end] = range.split("-").map(Number);
+    return currentTime >= start && currentTime <= end;
+  });
 }
 
 // check if the intervention timing has been reached
@@ -350,47 +378,89 @@ async function checkInterventions() {
   browser.storage.local.get(['meanRating', 'lastRating', 'settings', 'lastInterventionTime']).then((result) => {
     const availableInterventions = result.settings.availableInterventions || [];
     const lastInterventionTime = result.lastInterventionTime || null;
-    updateIconColor(result.meanRating, availableInterventions);
+    const lastRating = result.lastRating || null;
+    const meanRating = result.meanRating || null;
+    const interventionTimes = result.settings.interventionTimes || {};
+    const isWithinInterventionTime = checkInterventionTime(interventionTimes);
 
-    // Trigger intervention popups if the mean rating is below a certain threshold and the last alert was more than 20 minutes ago
-      if (availableInterventions.chatbot == true || availableInterventions.procrastinationList == true) {
-      const nMinutes =  20 * 60 * 1000; // 20 minutes in milliseconds
-      const now = Date.now();
+    // Check if the intervention timing is reached
+    updateIconColor(result.meanRating, availableInterventions, isWithinInterventionTime);
+    if (isWithinInterventionTime) {
 
-      if (result.meanRating < 0.5 && (lastInterventionTime === null || now - lastInterventionTime >= nMinutes)) {    
-        browser.storage.local.set({ lastInterventionTime: now });
-        if (availableInterventions.procrastinationList == true) {
-          browser.storage.local.set({ listInterventionTriggered: true }).then(() => {
-            identifyDistractingTabs(true);
-          });
+      if (meanRating < 0.5) {
+        // Trigger intervention popups if the mean rating is below a certain threshold and the last alert was more than 20 minutes ago
+        if (availableInterventions.chatbot == true || availableInterventions.procrastinationList == true) {
+          const nMinutes = 20 * 60 * 1000; // 20 minutes in milliseconds
+          const now = Date.now();
+
+          if (lastInterventionTime === null || now - lastInterventionTime >= nMinutes) {
+            browser.storage.local.set({ lastInterventionTime: now });
+            if (availableInterventions.procrastinationList == true) {
+              browser.storage.local.set({ listInterventionTriggered: true }).then(() => {
+                identifyDistractingTabs(true);
+              });
+            }
+            else if (availableInterventions.chatbot == true) {
+              browser.storage.local.set({ chatbotInterventionTriggered: true }).then(() => {
+                openInterventionPopup();
+              });
+            }
+          }
         }
-        else if (availableInterventions.chatbot == true) {
-          browser.storage.local.set({ chatbotInterventionTriggered: true }).then(() => {
-            openInterventionPopup();
+
+        if (availableInterventions.blocking == true) {
+          // check against alwaysBlockUrls and neverBlockUrls
+          browser.storage.local.get(['alwaysBlockUrls', 'neverBlockUrls', 'blockingTimeout']).then((result) => {
+            const alwaysBlockUrls = result.alwaysBlockUrls || [];
+            const defaultNeverBlockUrls = ["extension://", "localhost", "about:", "file://", "127.0.0.1", "0.0.0.0", "ProcrastiScan"]
+            const neverBlockUrls = [...defaultNeverBlockUrls, ...(result.neverBlockUrls || [])];
+            const currentUrl = browser.runtime.getURL("blocking.html");
+            const blockingTimeout = result.blockingTimeout || null;
+            if (alwaysBlockUrls.some(url => currentUrl.includes(url)) || lastRating < 0.5) {
+              browser.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
+                const currentTab = tabs[0];
+                // check against neverBlockUrls and blockingTimeout
+                if (!neverBlockUrls.some(url => currentTab.url.includes(url)) && (blockingTimeout === null || Date.now() > blockingTimeout)) {
+                  // log the current tab to the blockedTabTemp list
+                  browser.storage.local.set({
+                    blockedTabTemp: {
+                      url: currentTab.url,
+                      title: currentTab.title
+                    }
+                  });
+                  browser.tabs.update(currentTab.id, { url: browser.runtime.getURL("blocking.html") });
+                }
+              });
+            }
           });
         }
       }
-      }
-    });
-  };
+    }
+  });
+};
 
 
 // gather titles of all tabs
 function identifyDistractingTabs() {
-  browser.tabs.query({}).then(tabs => {
-    const distractingIndices = [];
+  browser.storage.local.get(['neverBlockUrls']).then((result) => {
+    const defaultNeverBlockUrls = ["extension://", "localhost", "about:", "file://", "127.0.0.1", "0.0.0.0", "ProcrastiScan"]
+    const neverBlockUrls = [...defaultNeverBlockUrls, ...(result.neverBlockUrls || [])];
 
-    const promises = tabs.map(tab => {
-      return getSimilarityRating({ tab: tab, save: false }).then(score => {
-        if (score < 0.5) {
-          distractingIndices.push({ index: tab.id });
-        }
+    browser.tabs.query({}).then(tabs => {
+      const distractingIndices = [];
+
+      const promises = tabs.map(tab => {
+        return getSimilarityRating({ tab: tab, save: false }).then(score => {
+          if (score < 0.5 && !neverBlockUrls.some(url => tab.url.includes(url))) {
+            distractingIndices.push({ index: tab.id });
+          }
+        });
       });
-    });
 
-    Promise.all(promises).then(() => {
-      handleDistractingTabs(distractingIndices).then(() => {
-        openInterventionPopup();
+      Promise.all(promises).then(() => {
+        handleDistractingTabs(distractingIndices).then(() => {
+          openInterventionPopup();
+        });
       });
     });
   });
@@ -414,25 +484,25 @@ function openInterventionPopup() {
     }).then((window) => {
       interventionWindowId = window.id;
     }).then(() => {
-    // Close the popup window if the user switches to another window
-    browser.windows.onFocusChanged.addListener((newWindowId) => {
-      if (interventionWindowId !== null) {
-        if (newWindowId === interventionWindowId) {
-          browser.windows.update(interventionWindowId, { focused: true });
-        } else {
-          browser.windows.remove(interventionWindowId);
-          interventionWindowId = null;
-          browser.windows.onFocusChanged.removeListener();
+      // Close the popup window if the user switches to another window
+      browser.windows.onFocusChanged.addListener((newWindowId) => {
+        if (interventionWindowId !== null) {
+          if (newWindowId === interventionWindowId) {
+            browser.windows.update(interventionWindowId, { focused: true });
+          } else {
+            browser.windows.remove(interventionWindowId);
+            interventionWindowId = null;
+            browser.windows.onFocusChanged.removeListener();
+          }
         }
-      }
+      });
     });
-  });
   }
 }
 
 // Open the options page after installation
 browser.runtime.onInstalled.addListener(() => {
-      browser.runtime.openOptionsPage();
+  browser.runtime.openOptionsPage();
 });
 
 //keep the service worker alive

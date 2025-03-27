@@ -1,8 +1,8 @@
 // chat.js - interaction with the interventions
 document.addEventListener('DOMContentLoaded', () => {
   if (document.getElementById('chat-container') !== null) {
-      loadConversation();
-      setEventListeners();
+    loadConversation();
+    setEventListeners();
   };
 });
 
@@ -52,7 +52,7 @@ function setEventListeners() {
 function sendMessage() {
   const inputField = document.getElementById('chat-message');
   const message = inputField.value.trim();
-  
+
   disableSendButton();
   storeMessageInConversation('User', message).then(messageHistory => {
     llmConversation(messageHistory);
@@ -129,129 +129,124 @@ function loadConversation() {
     }
     return Promise.resolve();
   })
-  // Get conversation from storage and render it
-  .then(() => getConversation())
-  .then(conversation => {
-    renderConversation(conversation);
+    // Get conversation from storage and render it
+    .then(() => getConversation())
+    .then(conversation => {
+      renderConversation(conversation);
 
-    browser.storage.local.get(['distractingTabs', 'chatbotInterventionTriggered']).then(({ distractingTabs, chatbotInterventionTriggered }) => {
-      // Handle distracting tabs if they exist and show interactive buttons
-      if (distractingTabs) {
-        const chatContainer = document.getElementById('chat-container');
-        const lastMessage = chatContainer.lastElementChild;
+      browser.storage.local.get(['distractingTabs', 'chatbotInterventionTriggered']).then(({ distractingTabs, chatbotInterventionTriggered }) => {
+        // Handle distracting tabs if they exist and show interactive buttons
+        if (distractingTabs) {
+          const chatContainer = document.getElementById('chat-container');
+          const lastMessage = chatContainer.lastElementChild;
 
-        // Create checkboxes for each distracting tab
-        const checkboxesHtml = distractingTabs.map((tab, index) => `
-          <div>
-            <input type="checkbox" id="tab-${index}" checked>
-            <label for="tab-${index}">${tab.title} (${tab.url})</label>
-          </div>
-        `).join('');
+          // Create checkboxes for each distracting tab
+          const checkboxesHtml = distractingTabs.map((tab, index) => `<div><input type="checkbox" id="tab-${index}" checked><label for="tab-${index}"> ${tab.title} (${tab.url})</label></div>`).join('');
 
-        lastMessage.innerHTML = `It looks like you have some distracting tabs open:<br><br>${checkboxesHtml}<br><br>What would you like to do with them?`;
+          lastMessage.innerHTML = `It looks like you have some distracting tabs open:<br><br>${checkboxesHtml}<br><br>What would you like to do with them?`;
 
-        const actionsContainer = document.createElement('div');
-        actionsContainer.classList.add('actions-container');
+          const actionsContainer = document.createElement('div');
+          actionsContainer.classList.add('actions-container');
 
-        const buttonsContainer = document.createElement('div');
-        buttonsContainer.classList.add('button-container');
+          const buttonsContainer = document.createElement('div');
+          buttonsContainer.classList.add('button-container');
 
-        function handleButtonAction(action, distractingTabs) {
-          return () => {
-            const selectedTabs = distractingTabs.filter((tab, index) => 
-              document.getElementById(`tab-${index}`).checked
-            );
-        
-            storeMessageInConversation('User', action, false).then(() => {
-              // Perform action based on the button clicked
-              switch (action) {
-                case 'Close Tabs':
-                  closeDistractingTabs(selectedTabs);
-                  break;
-                case 'Save Tabs to Procrastination List':
-                  saveDistractingTabs(selectedTabs);
-                  break;
-                case 'Save and Close Tabs':
-                  saveDistractingTabs(selectedTabs);
-                  closeDistractingTabs(selectedTabs);
-                  break;
-                case 'Do Nothing':
-                  break;
-                default:
-                  break;
-              }
-              browser.storage.local.remove('distractingTabs').then(() => {
-                enableSendButton();
-                loadConversation();
+          function handleButtonAction(action, distractingTabs) {
+            return () => {
+              const selectedTabs = distractingTabs.filter((tab, index) =>
+                document.getElementById(`tab-${index}`).checked
+              );
+
+              storeMessageInConversation('User', action, false).then(() => {
+                // Perform action based on the button clicked
+                switch (action) {
+                  case 'Close Tabs':
+                    closeDistractingTabs(selectedTabs);
+                    break;
+                  case 'Save Tabs to Procrastination List':
+                    saveDistractingTabs(selectedTabs);
+                    break;
+                  case 'Save and Close Tabs':
+                    saveDistractingTabs(selectedTabs);
+                    closeDistractingTabs(selectedTabs);
+                    break;
+                  case 'Do Nothing':
+                    break;
+                  default:
+                    break;
+                }
+                browser.storage.local.remove('distractingTabs').then(() => {
+                  enableSendButton();
+                  loadConversation();
+                });
               });
-            });
-          };
+            };
+          }
+
+          const closeTabsButton = document.createElement('button');
+          closeTabsButton.textContent = 'Close Tabs';
+          closeTabsButton.classList.add('btn', 'btn-primary');
+          closeTabsButton.addEventListener('click', handleButtonAction('Close Tabs', distractingTabs));
+          buttonsContainer.appendChild(closeTabsButton);
+
+          const saveTabsButton = document.createElement('button');
+          saveTabsButton.textContent = 'Save Tabs to Procrastination List';
+          saveTabsButton.classList.add('btn', 'btn-primary');
+          saveTabsButton.addEventListener('click', handleButtonAction('Save Tabs to Procrastination List', distractingTabs));
+          buttonsContainer.appendChild(saveTabsButton);
+
+          const saveAndCloseTabsButton = document.createElement('button');
+          saveAndCloseTabsButton.textContent = 'Save and Close Tabs';
+          saveAndCloseTabsButton.classList.add('btn', 'btn-primary');
+          saveAndCloseTabsButton.addEventListener('click', handleButtonAction('Save and Close Tabs', distractingTabs));
+          buttonsContainer.appendChild(saveAndCloseTabsButton);
+
+          const doNothingButton = document.createElement('button');
+          doNothingButton.textContent = 'Do Nothing';
+          doNothingButton.classList.add('btn', 'btn-primary');
+          doNothingButton.addEventListener('click', handleButtonAction('Do Nothing', distractingTabs));
+          buttonsContainer.appendChild(doNothingButton);
+
+          actionsContainer.appendChild(buttonsContainer);
+          chatContainer.appendChild(actionsContainer);
+          browser.storage.local.remove('distractingTabs');
         }
+        // Handle chatbot intervention if it exists.
+        if (chatbotInterventionTriggered) {
+          const chatContainer = document.getElementById('chat-container');
+          const actionsContainer = document.createElement('div');
+          actionsContainer.classList.add('actions-container');
 
-      const closeTabsButton = document.createElement('button');
-      closeTabsButton.textContent = 'Close Tabs';
-      closeTabsButton.classList.add('btn', 'btn-primary');
-      closeTabsButton.addEventListener('click', handleButtonAction('Close Tabs', distractingTabs));
-      buttonsContainer.appendChild(closeTabsButton);
+          const buttonsContainer = document.createElement('div');
+          buttonsContainer.classList.add('button-container');
 
-      const saveTabsButton = document.createElement('button');
-      saveTabsButton.textContent = 'Save Tabs to Procrastination List';
-      saveTabsButton.classList.add('btn', 'btn-primary');
-      saveTabsButton.addEventListener('click', handleButtonAction('Save Tabs to Procrastination List', distractingTabs));
-      buttonsContainer.appendChild(saveTabsButton);
+          const yesButton = document.createElement('button');
+          yesButton.textContent = 'Yes';
+          yesButton.classList.add('btn', 'btn-primary');
+          yesButton.addEventListener('click', () => {
+            browser.storage.local.remove('chatbotInterventionTriggered');
+            storeMessageInConversation('User', "Yes").then(messageHistory => {
+              llmConversation(messageHistory);
+            });
+          });
+          buttonsContainer.appendChild(yesButton);
 
-      const saveAndCloseTabsButton = document.createElement('button');
-      saveAndCloseTabsButton.textContent = 'Save and Close Tabs';
-      saveAndCloseTabsButton.classList.add('btn', 'btn-primary');
-      saveAndCloseTabsButton.addEventListener('click', handleButtonAction('Save and Close Tabs', distractingTabs));
-      buttonsContainer.appendChild(saveAndCloseTabsButton);
+          const noButton = document.createElement('button');
+          noButton.textContent = 'No';
+          noButton.classList.add('btn', 'btn-primary');
+          noButton.addEventListener('click', () => {
+            browser.storage.local.remove(['chatbotInterventionTriggered']);
+            storeMessageInConversation('User', "No", false).then(() => {
+              window.close();
+            });
+          });
+          buttonsContainer.appendChild(noButton);
 
-      const doNothingButton = document.createElement('button');
-      doNothingButton.textContent = 'Do Nothing';
-      doNothingButton.classList.add('btn', 'btn-primary');
-      doNothingButton.addEventListener('click', handleButtonAction('Do Nothing', distractingTabs));
-      buttonsContainer.appendChild(doNothingButton);
-
-      actionsContainer.appendChild(buttonsContainer);
-      chatContainer.appendChild(actionsContainer);
-      browser.storage.local.remove('distractingTabs');
-    }
-    // Handle chatbot intervention if it exists.
-    if (chatbotInterventionTriggered) {
-      const chatContainer = document.getElementById('chat-container');
-      const actionsContainer = document.createElement('div');
-      actionsContainer.classList.add('actions-container');
-    
-      const buttonsContainer = document.createElement('div');
-      buttonsContainer.classList.add('button-container');
-    
-      const yesButton = document.createElement('button');
-      yesButton.textContent = 'Yes';
-      yesButton.classList.add('btn', 'btn-primary');
-      yesButton.addEventListener('click', () => {
-        browser.storage.local.remove('chatbotInterventionTriggered');
-        storeMessageInConversation('User', "Yes").then(messageHistory => {
-          llmConversation(messageHistory);
-        });
+          actionsContainer.appendChild(buttonsContainer);
+          chatContainer.appendChild(actionsContainer);
+        }
       });
-      buttonsContainer.appendChild(yesButton);
-    
-      const noButton = document.createElement('button');
-      noButton.textContent = 'No';
-      noButton.classList.add('btn', 'btn-primary');
-      noButton.addEventListener('click', () => {
-        browser.storage.local.remove(['chatbotInterventionTriggered']);
-        storeMessageInConversation('User', "No", false).then(() => {
-          window.close();
-        });
-      });
-      buttonsContainer.appendChild(noButton);
-    
-      actionsContainer.appendChild(buttonsContainer);
-      chatContainer.appendChild(actionsContainer);
-    }
-  });
-});
+    });
 }
 
 
@@ -268,6 +263,10 @@ function renderConversation(conversation) {
       const messageElement = document.createElement('div');
       messageElement.classList.add('chat-message', msg.sender);
       messageElement.innerHTML = msg.message;
+      // ensure line breaks are preserved
+      messageElement.style.whiteSpace = 'pre-wrap';
+      // use ** for bold text
+      messageElement.innerHTML = messageElement.innerHTML.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
       chatContainer.appendChild(messageElement);
     });
 
@@ -300,7 +299,7 @@ function storeConversation(conversation) {
 // Disable send button
 function disableSendButton() {
   document.getElementById('sendMessageBtn').disabled = true;
-  document.getElementById('sendMessageBtn').style.opacity = '0.5'; 
+  document.getElementById('sendMessageBtn').style.opacity = '0.5';
   document.getElementById('interveneBasicPromptBtn').disabled = true;
   document.getElementById('interveneBasicPromptBtn').style.opacity = '0.5';
 }
@@ -350,7 +349,28 @@ async function llmConversation(messageHistory) {
   console.log(messageHistory);
   loadConversation();
 
-  let task, relatedContent, commonDistractions, llmPort;
+  let task, relatedContent, commonDistractions, llmPort, recentContent;
+  await browser.storage.local.get("similarityRatings").then((result) => {
+    recentContent = result.similarityRatings;
+    // Filter out the last 10 minutes of content
+    const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
+    recentContent = recentContent.filter(item => item.time > tenMinutesAgo);
+    // Filter out ProcrastiScan content
+    recentContent = recentContent.filter(item => item.title !== 'ProcrastiScan');
+    // Filter out duplicates
+    recentContent = recentContent.filter((item, index, self) =>
+      index === self.findIndex((t) => (
+        t.title === item.title
+      ))
+    );
+    // create a table with time spent
+    recentContent = recentContent.map(item => {
+      return {
+        time_spent: new Date(item.time).toLocaleTimeString(),
+        title: item.title,
+      };
+    });
+  });
   await browser.storage.local.get(['task', 'relatedContent', 'commonDistractions', 'settings']).then(result => {
     task = result.task;
     relatedContent = result.relatedContent;
@@ -359,14 +379,16 @@ async function llmConversation(messageHistory) {
   });
 
   const systemPrompt = `
-You are a compassionate and non-judgmental assistant who is helping a user overcome distractions and stay focused on their goals. You do NOT give unsolicited advice and focus on being supportive and understanding. You take care to not make the user feel ashamed or guilty about their distractions.
-Here is some information about the user:
+You are a compassionate and non-judgmental assistant of a browser extension called ProcrastiScan who is helping a user overcome distractions and stay focused on their goals. You focus on being supportive and understanding and do NOT give unsolicited advice. You take care to NOT make the user feel ashamed or guilty about their distractions. You talk in a casual, concise and to the point-style just like the user, using the tone of a friend. Your answers must have a length of at most 100 words. If the user themself indicates that they might be distracted, assume they have tried common advice such as Pomodoro timers or breaking tasks down and need more specific help than that, as indicated by their query.
+
+Here is some information about the user's task, common distractions and potentially useful content. You do NOT regurgitate this when talking to the user but keep it in mind when answering their questions. 
 Current task: ${task}
 Examples of useful content for the task: ${relatedContent}
 Common distractions of the user: ${commonDistractions}
-Ask the user how they feel right now. You do NOT confront the user with the assumption that they could be distracted. You do NOT refer to the user information unless asked to. Your answers have at most 20 words unless the user specifically asks for a longer answer. You talk in a casual, concise and to the point-style just like the user, using the tone of a friend.
-`;
 
+Most recent content visited by the user:
+${recentContent.map(item => `${item.time_spent} - ${item.title}`).join("\n")}
+`;
   messageHistory = [
     { role: "system", content: systemPrompt },
     ...messageHistory.map(item => ({
@@ -374,28 +396,27 @@ Ask the user how they feel right now. You do NOT confront the user with the assu
       content: item.message
     }))
   ];
-  
+
   const response = await fetch(`http://localhost:${llmPort}/v1/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: "gpt-3.5-turbo",
+      model: "",
       messages: messageHistory,
-      max_tokens: 100,
       temperature: 0,
       repetition_penalty: 1.15,
-      stop: ["user", "assistant", "\n", "User", "Assistant"]
     })
   });
 
   const data = await response.json();
-  console.log();
   let llmOutput = data.choices[0].message.content
-  .replace(/\\n/g, "\n")
-  .replace(/Assistant:/, "")
-  .replace(/<assistant>/g, "");
+    .replace(/<think>.*?<\/think>/gs, "")
+    .replace(/Assistant:/, "")
+    .replace(/<assistant>/gi, "")
+    .trim();
+
   console.log(llmOutput);
   replacePlaceholder(llmOutput);
   enableSendButton();

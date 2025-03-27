@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Tab Blocked - ProcrastiScan</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootswatch/4.3.1/darkly/bootstrap.min.css">
+  <style>
+    body {
+      padding: 15px;
+      min-width: 800px;
+    }
+
+    .url-toggle-container {
+      display: inline-flex;
+      vertical-align: baseline;
+      margin: 0px;
+    }
+
+    .url-toggle-btn {
+      padding: 0 8px;
+      height: 1.5em;
+      line-height: 1.5em;
+      font-size: inherit;
+      vertical-align: baseline;
+      margin: 0 3px;
+      transition: background-color 0.2s ease;
+      font-weight: normal;
+    }
+
+    .url-toggle-btn.active {
+      background-color: #13c195;
+      color: white;
+      box-shadow: inset 0 3px 5px rgba(0, 0, 0, .125);
+    }
+
+    .url-toggle-btn:not(.active) {
+      background-color: #b3bbc2;
+      color: #f8f9fa;
+    }
+
+    .url-toggle-btn:hover:not(.active) {
+      background-color: #5a6268;
+    }
+
+    .url-display {
+      word-break: break-all;
+      padding: 8px;
+      background-color: #444;
+      border-radius: 4px;
+      margin-bottom: 15px;
+    }
+
+    .info-tooltip {
+      position: relative;
+      display: inline-block;
+      margin-left: 5px;
+      cursor: help;
+    }
+
+    .info-tooltip .info-icon {
+      color: rgb(207, 207, 207);
+      font-size: 0.85rem;
+      font-weight: normal;
+    }
+
+    .info-tooltip .tooltiptext {
+      visibility: hidden;
+      width: 400px;
+      background-color: #333;
+      color: #fff;
+      text-align: start;
+      border-radius: 6px;
+      padding: 10px;
+      position: absolute;
+      z-index: 1;
+      top: 125%;
+      left: 50%;
+      margin-left: -125px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      font-size: 0.85rem;
+      line-height: 1.4;
+      font-weight: normal;
+    }
+
+    .info-tooltip .tooltiptext::after {
+      content: "";
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      margin-left: -5px;
+      border-width: 5px;
+      border-style: solid;
+      border-color: transparent transparent #333 transparent;
+    }
+
+    .info-tooltip:hover .tooltiptext {
+      visibility: visible;
+      opacity: 1;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="alert alert-danger" role="alert">
+    <div style="text-align: center;">
+      <strong>This tab has been blocked by ProcrastiScan</strong>
+    </div>
+  </div>
+  <div style="text-align: center; max-width: 30%; margin: 0 auto;">
+    <div class="form-group">
+      <div class="alert alert-secondary" role="alert" style="text-align: center;">
+        <strong>Should content like this be more or less likely to be flagged as distracting?</strong>
+        <div class="info-tooltip">
+          <span class="info-icon">[info]</span>
+          <span class="tooltiptext">The displayed tab title will be treated as if it was a keyword for your common
+            distractions (thumbs up) or related content (thumbs down). Just as with the other keywords, this means
+            that the displayed title should be related in meaning or a distinct name that would likely match the
+            intended
+            content.<br><br>If the tab title is something like "Untitled Document" or "New Tab", you probably don't want
+            to select either option here. You can undo your selection by clicking the button again.<br><br>You can view
+            and manage your penalized/preserved tab titles in the Filters tab.</span>
+
+          </span>
+        </div>
+      </div>
+      <div class="url-display" id="blockedTabTitle">
+      </div>
+      <button class="btn btn-success mb-2" id="accurateRatingBtn" style="width: 100%;">👍 Yes, penalize similar
+        tabs</button>
+      <button class="btn btn-danger mb-2" id="inaccurateRatingBtn" style="width: 100%;">👎 No, this was
+        relevant</button>
+    </div>
+    <div class="form-group">
+      <div class="alert alert-secondary" role="alert" style="text-align: center;">
+        <span class="question-text"><strong>Do you want to block this</strong></span>
+        <div class="url-toggle-container">
+          <button class="btn btn-group url-toggle-btn active" id="tabToggleBtn"><strong>tab</strong></button>
+          <button class="btn btn-group url-toggle-btn" id="domainToggleBtn"><strong>domain</strong></button>
+        </div>
+        <span class="question-text">?</span>
+
+        <div class="info-tooltip">
+          <span class="info-icon">[info]</span>
+          <span class="tooltiptext">Here you can set a "strict" block/allow for the shown URL/domain. If you don't want
+            a final decision, you can pause all blocking for 10 minutes instead.</span>
+        </div>
+      </div>
+    </div>
+    <div class="url-display" id="currentUrl">
+    </div>
+    <button class="btn btn-success mb-2" id="alwaysBlockBtn" style="width: 100%;">Always block (<strong>close</strong>
+      this tab)</button>
+    <button class="btn btn-danger mb-2" id="neverBlockBtn" style="width: 100%;">Never block (<strong>return</strong> to
+      the tab)</button>
+    <button class="btn btn-warning mb-2" id="disableBlockingBtn" style="width: 100%;">Disable blocking for 10 minutes
+      and <strong>return</strong> to the tab</button>
+  </div>
+  </div>
+  <script src="lib/browser-polyfill.js"></script>
+  <script src="blocking.js"></script>
+</body>
+
+</html>

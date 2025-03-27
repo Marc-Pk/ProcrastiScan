@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       const link = document.createElement('a');
       link.href = entry.url;
-      link.textContent = entry.title;
+      link.textContent = entry.title.length > 60 ? entry.title.slice(0, 60) + '...' : entry.title;
       link.style.color = '#3498db';
       link.target = '_blank';
       titleCell.appendChild(link);
@@ -50,12 +50,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const updatedEntries = distractingEntries.filter((entry, index) => !selectedEntries.includes(index));
     await browser.storage.local.set({ 'distractingEntries': updatedEntries });
-    location.reload(); // Refresh the page to reflect changes
+    location.reload();
   });
 
   document.getElementById('deleteAllBtn').addEventListener('click', async () => {
     await browser.storage.local.set({ 'distractingEntries': [] });
-    location.reload(); // Refresh the page to reflect changes
+    location.reload();
   });
 
 });
@@ -73,10 +73,9 @@ async function saveToProcrastinationList(title, url) {
   const existingEntries = distractingEntries || [];
   existingEntries.push(entry);
   await browser.storage.local.set({ distractingEntries: existingEntries });
-  // Reload the table
   reloadTable();
 }
 
 function reloadTable() {
-  location.reload(); // Refresh the page to reflect changes
+  location.reload();
 }

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <meta charset="UTF-8">
   <title>Settings - ProcrastiScan</title>
@@ -9,26 +10,32 @@
       padding: 15px;
       min-width: 800px;
     }
+
     .form-group {
       display: flex;
       flex-direction: column;
     }
+
     .connectionStatusIndicator {
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
+
     .container {
       display: flex;
     }
+
     .settings-form {
       flex: 1;
     }
+
     .llm-settings {
       margin-left: 50px;
     }
   </style>
 </head>
+
 <body>
   <div>
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
@@ -46,6 +53,9 @@
           <a class="nav-link" href="chat.html" id="routeToChatBtn">Chat</a>
         </li>
         <li class="nav-item" style="margin-right: 10px">
+          <a class="nav-link" href="filters.html" id="routeToFiltersBtn">Filters</a>
+        </li>
+        <li class="nav-item" style="margin-right: 10px">
           <a class="nav-link" href="dashboard.html" id="routeToDashboardBtn">Statistics</a>
         </li>
         <li class="nav-item" style="margin-right: 10px">
@@ -54,44 +64,104 @@
       </ul>
     </nav>
     <div style="text-align: center;">
-      <h6>Hover over the settings items for details. Check out the <a href="https://github.com/Marc-Pk/ProcrastiScan/#advanced-setup" target="_blank">documentation</a> for a detailed guide.</h6> 
+      <h6>Hover over the settings items for details. Check out the <a
+          href="https://github.com/Marc-Pk/ProcrastiScan/" target="_blank">documentation</a> for a
+        detailed guide.</h6>
     </div>
     <div class="container">
       <div class="settings-form">
         <h4>Intervention Settings</h4>
         <form>
           <div class="form-check">
-            <input class="form-check-input" type="checkbox" name="interventionOptions" id="nudgingOption" value="nudging">
+            <input class="form-check-input" type="checkbox" name="interventionOptions" id="nudgingOption"
+              value="nudging">
             <label class="form-check-label" for="nudgingOption" title="">
               Color the toolbar based on the distraction level
             </label>
           </div>
-          <h5 title="What intervention should be triggered if you get distracted (the averaged similarity score falls below 0.5)?">Triggered Intervention </h5>
+
+          <h4 title="What intervention should be triggered if you get distracted (your Focus Score falls below 0.5)?">
+            Triggered Intervention </h4>
           <div class="form-check none" title="No intervention will be triggered if you get distracted">
-            <input class="form-check-input" type="radio" name="interventionOptions" id="NoInterventionOption" value="none" checked>
-            <label class="form-check-label" for="NoInterventionOption">
+            <input class="form-check-input" type="radio" name="interventionOptions" id="noInterventionOption"
+              value="none" checked>
+            <label class="form-check-label" for="noInterventionOption">
               None
             </label>
           </div>
-          <div class="form-check procrastinationList" title="Irrelevant tabs are automatically selected, you can then choose to close them or save them to the Procrastination List tab">
-            <input class="form-check-input" type="radio" name="interventionOptions" id="procrastinationListOption" value="procrastinationList">
+          <div class="form-check blocking"
+            title="Tabs that are automatically or manually classified as distracting will be blocked. On the blocking page, you can choose to block/allow similar tabs more often or always block/allow the specific URL or domain. Blocked/allowed content can be managed in the Filters tab. Blocking only works for tabs, not for other programs. Make sure to read the warning by hovering over the ⚠️ symbol to the right!">
+            <input class="form-check-input" type="radio" name="interventionOptions" id="blockingOption"
+              value="blocking">
+            <label class="form-check-label" for="blockingOption">
+              Tab Blocking
+            </label>
+            <span id="blockingWarning" style="display: inline;"
+            title="WARNING: Important tabs like booking processes, chats, or LLM providers might be accidentally blocked when using this intervention, leading to data loss. It can also happen that such pages can be accessed at first but are blocked after switching to the tab later, in case your Focus Score drops below 0.5 meanwhile. Add frequently used important domains to the allow list either on the blocking page or the Filters tab"> ⚠️</span>
+          </div>
+          <div class="form-check procrastinationList"
+            title="Irrelevant tabs are automatically selected, you can then choose to close them or save them to the Procrastination List tab">
+            <input class="form-check-input" type="radio" name="interventionOptions" id="procrastinationListOption"
+              value="procrastinationList">
             <label class="form-check-label" for="procrastinationListOption">
               Procrastination List
             </label>
           </div>
-          <div class="form-check chatbot" title="A chatbot will help you get back to your task. Requires the LLM connection to be set up">
+          <div class="form-check chatbot"
+            title="A chatbot will help you get back to your task. Requires the LLM connection to be set up">
             <input class="form-check-input" type="radio" name="interventionOptions" id="chatbotOption" value="chatbot">
             <label class="form-check-label" for="chatbotOption">
               Chatbot
             </label>
-            <span id="chatbotWarning" class="badge badge-danger" style="display: inline;" title="LLM is disconnected. The chatbot intervention will not work">⚠️</span>
+            <span id="chatbotWarning" style="display: inline;"
+              title="LLM is disconnected. The chatbot intervention will not work"> ⚠️</span>
           </div>
         </form>
       </div>
       <div class="llm-settings">
+
+        <h4 title="At which times should interventions be active?">
+          Intervention Times</h4>
+        <div class="form-group">
+          <label for="blockingTimeRanges"
+            title="Enter time ranges in HHMM-HHMM format, separated by commas (e.g., 0900-1230,1300-1700)">Select Time
+            Ranges:</label>
+          <input type="text" class="form-control" id="blockingTimeRanges" placeholder="0900-1230,1300-1700">
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;" id="dayOfWeekCheckboxes">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="monday" value="Monday">
+            <label class="form-check-label" for="monday">Mon</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="tuesday" value="Tuesday">
+            <label class="form-check-label" for="tuesday">Tue</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="wednesday" value="Wednesday">
+            <label class="form-check-label" for="wednesday">Wed</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="thursday" value="Thursday">
+            <label class="form-check-label" for="thursday">Thu</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="friday" value="Friday">
+            <label class="form-check-label" for="friday">Fri</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="saturday" value="Saturday">
+            <label class="form-check-label" for="saturday">Sat</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="sunday" value="Sunday">
+            <label class="form-check-label" for="sunday">Sun</label>
+          </div>
+        </div>
         <h4>Optional Connections</h4>
         <div class="pythonServerConnectionStatusIndicator connectionStatusIndicator">
-          <span title="Optional python server connection, used to score any programs instead of just tabs">Server Connection Status:</span>
+          <span title="Optional python server connection, used to score any programs instead of just tabs">Server
+            Connection Status:</span>
           <span class="badge badge-success" style="display: none;" id="pythonServerConnected">Connected</span>
           <span class="badge badge-warning" style="display: inline;" id="pythonServerFetching">Fetching...</span>
           <span class="badge badge-danger" style="display: none;" id="pythonServerDisconnected">Disconnected</span>
@@ -104,9 +174,11 @@
             <span class="badge badge-danger" style="display: none;" id="llmDisconnected">Disconnected</span>
           </div>
           <div style="display: flex; align-items: center;">
-            <label for="llmPort" title="You can connect to a local LLM using an OpenAI-compatible API, which is required for the chatbot intervention. Enter the port number here" style="margin-right: 10px;">LLM Port:</label>
-            <input type="text" class="form-control" style="  flex: 1;" id="llmPort" value="5000">
+            <label for="llmPort"
+              title="You can connect to a local LLM using an OpenAI-compatible API, which is required for the chatbot intervention. Enter the port number here"
+              style="margin-right: 10px;">LLM Port:</label>
           </div>
+          <input type="text" class="form-control" style="  flex: 1;" id="llmPort" value="5000">
         </div>
       </div>
     </div>
@@ -114,4 +186,5 @@
     <script src="settings.js"></script>
   </div>
 </body>
+
 </html>

@@ -7,17 +7,22 @@ import traceback
 
 # Get the active window's name and title
 def get_program_info():
-    window = pywinctl.getActiveWindow()
-    name = window.getAppName()
+    try:
+        window = pywinctl.getActiveWindow()
+        name = window.getAppName()
 
-    # remove file extension
-    name = name.split(".")[0]
-    title = window.title
-    return name, title
+        # remove file extension
+        name = name.split(".")[0]
+        title = window.title
+        return name, title
+    except AttributeError as e:
+        print(f"Error getting program info: {e}")
+        return "", ""
 
 # WebSocket server handler
-async def handler(websocket, path):
+async def handler(websocket):
     previous_name, previous_title = get_program_info()
+    browser_names = ["firefox", "chrome", "edge", "opera", "brave", "vivaldi", "safari", "msedge"]
 
     #get the browser name by checking the program when the connection is first established
     message = await asyncio.wait_for(asyncio.shield(websocket.recv()), timeout=None)
@@ -26,7 +31,7 @@ async def handler(websocket, path):
         browser_name, _ = get_program_info()
 
         # fetch the browser name until a valid browser is detected
-        while browser_name.lower() not in ["firefox", "chrome", "edge", "opera", "brave", "vivaldi", "safari", "msedge"]:
+        while browser_name.lower() not in browser_names:
             browser_name, _ = get_program_info()
             await asyncio.sleep(0.1)
 
@@ -34,8 +39,7 @@ async def handler(websocket, path):
         # continuously loop to send messages to the extension client if the current window changes
         while True:
             current_name, current_title = get_program_info()
-            browser_name = "firefox"
-            if current_name in ["Task Switching", "", browser_name, None] or current_title in ["Task Switching", "", previous_title, None]:
+            if current_name in ["Task Switching", "", None] or current_name in browser_names or current_title in ["Task Switching", "", previous_title, None]:
                 await asyncio.sleep(0.2)
 
             else:
