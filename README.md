@@ -5,9 +5,9 @@ Downloads:
 
 [Extension Server](https://github.com/Marc-Pk/ProcrastiScan/releases)
 
-ProcrastiScan helps you stay focused and productive by continually checking if the content you're viewing aligns with what you actually want to be doing. 
+ProcrastiScan helps you stay focused and productive by continually checking if the content you're viewing aligns with what you actually want to be doing.
 
-As you browse, a **Relevance Score** is calculated for every tab, based on the content you're viewing and a specified task. The higher the score, the more relevant the content is to your task. An averaged **Focus Score** is calculated to reflect your current level of focus. If it falls below 0.5, the extension considers you to be distracted and intervenes according to your settings.
+As you browse, a **Relevance Score** is calculated for every tab, based on how similar it is to your task and your descriptions of relevant/distracting content. If the score is higher than 0.5, content is considered relevant, lower scores are considered distracting. An averaged **Focus Score** is calculated to reflect your current level of focus. If it falls below 0.5, ProcrastiScan assumes you're distracted and one of various interventions to choose from will be activated.
 
 
 # Table of Contents
